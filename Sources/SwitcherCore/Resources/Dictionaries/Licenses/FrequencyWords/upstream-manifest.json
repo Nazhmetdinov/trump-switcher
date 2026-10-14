@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "source": "FrequencyWords by Hermit Dave (OpenSubtitles 2018), CC BY-SA 4.0",
+  "packs": [
+    {
+      "lang": "en",
+      "version": 1,
+      "count": 30000,
+      "file": "en.v1.deflate",
+      "size": 82986,
+      "sha256": "3676b89f387c7df8f6c153e66059ea1b4425a20ca38ee17bd1d06cbf248f4812"
+    },
+    {
+      "lang": "ru",
+      "version": 1,
+      "count": 50000,
+      "file": "ru.v1.deflate",
+      "size": 160613,
+      "sha256": "cebe4e4225b274a550c9080205bfdfd3f9ddb4ee9abd81452dd1664cc1761790"
+    }
+  ]
+}

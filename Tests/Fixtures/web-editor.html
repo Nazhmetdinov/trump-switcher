@@ -1,0 +1,9 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><title>Trump Switcher: тест веб-полей</title>
+<style>body{font:20px system-ui;max-width:780px;margin:40px auto} [contenteditable],textarea,input{display:block;border:2px solid #555;padding:15px;margin:15px 0;width:90%;min-height:55px}</style>
+<h1>Проверка Trump Switcher</h1><p>Только тестовый текст. Данные никуда не отправляются.</p>
+<label>Редактор без ARIA<div contenteditable="true" id="editor" aria-label="Тестовый редактор"></div></label>
+<label>Редактор с ролью группы<div contenteditable="true" role="group" id="group" aria-label="Редактор AXGroup"></div></label>
+<label>Редактор с форматированием<div contenteditable="true" role="group" id="rich" aria-label="Редактор с форматированием"><p>Тест <b>жирный</b> текст: </p></div></label>
+<label>Обычное поле<textarea aria-label="Обычное поле"></textarea></label>
+<label>Пароль<input type="password" aria-label="Пароль"></label><div role="group" tabindex="0" aria-label="Не редактируемая группа">Этот текст не должен меняться.</div>
+</html>

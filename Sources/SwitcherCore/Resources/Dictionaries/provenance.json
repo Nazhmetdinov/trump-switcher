@@ -1,0 +1,119 @@
+{
+  "imported": "2026-10-09",
+  "libreoffice": {
+    "repository": "https://github.com/LibreOffice/dictionaries",
+    "commit": "32b006a2c22a4ac7e8ed3f03346f7b3d85a970a4",
+    "files": "ru_RU and en_US .aff/.dic unchanged"
+  },
+  "hunspell": {
+    "repository": "https://github.com/hunspell/hunspell",
+    "tag": "v1.7.2",
+    "licenseChoice": "MPL-1.1",
+    "changes": "Generated hunvisapi.h for static macOS build; source otherwise unchanged. Source included in Sources/Hunspell."
+  },
+  "frequencyWords": {
+    "repository": "https://github.com/hermitdave/FrequencyWords",
+    "packRepository": "https://github.com/rashn/RuSwitcher",
+    "packCommit": "2ee0bc70ec9ea1e1455246cdbd54708532a61122",
+    "license": "CC-BY-SA-4.0",
+    "changes": "RuSwitcher filters lowercase words of length >=3, top 50000 Russian/30000 English. SafeSwitcher expands raw deflate to UTF-8 text; word lists unchanged."
+  },
+  "files": {
+    "en_US.aff": {
+      "bytes": 3205,
+      "sha256": "e746c882dd6f303c2c46e7452804b9201115a6942cfeb15f18f8edf774d2e24e"
+    },
+    "ru_RU.dic": {
+      "bytes": 3473191,
+      "sha256": "f6047416a0204adbecf3a451b874ec8a97ee37e2cbc714466ef04d8dbcc0d6fc"
+    },
+    "README_ru_RU.txt": {
+      "bytes": 1886,
+      "sha256": "262af2f6ad70a61e5ee1332ff44fa8ee50edca819cf33207d8ad6ba6a0c9be52"
+    },
+    "en_frequency.txt": {
+      "bytes": 237202,
+      "sha256": "a2933fea91f80cb911df0506f026839cb9dd5620a6b9176a658612bdd19bc6bc"
+    },
+    "ru_frequency.txt": {
+      "bytes": 804318,
+      "sha256": "960ef65f1cfd8bf0ae79471069eccba7cd6c38f2fc15bd73b19db2dfe152c947"
+    },
+    "ru_RU.aff": {
+      "bytes": 71236,
+      "sha256": "38ce7d4af78e211e9bafe4bf7e3d6a2c420591136cb738ec6648f8fdf6524cd7"
+    },
+    "README_en_US.txt": {
+      "bytes": 15732,
+      "sha256": "168b4c01cb841f766a72f310b065c04d09cff46376c37a81d799593ce751c371"
+    },
+    "en_US.dic": {
+      "bytes": 551762,
+      "sha256": "f0b1a234bd178bdd01875b2a392a9647f888b8fe879f79c52aae62c2759b3647"
+    },
+    "iana_tlds.txt": {
+      "bytes": 9528,
+      "sha256": "d8596c734273ec6280d42c5feb4db8618e71dc485f64d483774817a781093d85"
+    },
+    "ru_modern.aff": {
+      "bytes": 53186,
+      "sha256": "aebb6f2d4f80c38f3ed559b74aa6f178564cd98704f61970168f5436375f8448"
+    },
+    "ru_modern.dic": {
+      "bytes": 6298457,
+      "sha256": "a76c323b7342de1a2c26f11713603604e4c9a7b7ef45631fab2960f10450fb2d"
+    },
+    "en_GB.aff": {
+      "bytes": 44158,
+      "sha256": "0fd6ed120ef28957847d98ba5149b117e27116cf81b5aa36208453f6755a36fd"
+    },
+    "en_GB.dic": {
+      "bytes": 1230571,
+      "sha256": "04e90f34f5263bf26780e9c4a442e9ad16584e227af49ddd1b3b21b01df5b29c"
+    },
+    "README_en_GB.txt": {
+      "bytes": 10644,
+      "sha256": "18b5833de60a52ffcb6e5b6b5048bb5a5d910acfecd5b096985b77058223880c"
+    },
+    "Licenses/RussianModern/LICENSE-ru-modern.txt": {
+      "bytes": 18491,
+      "sha256": "968c8d1e8cb68f2799a3c183b20aeeb22a04b815a2f52da457b80400294ec1bb"
+    },
+    "Licenses/RussianModern/MPL-2.0.txt": {
+      "bytes": 16726,
+      "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04"
+    },
+    "Licenses/RussianModern/README-ru-modern.md": {
+      "bytes": 2154,
+      "sha256": "8f9029247b0c68fdc9a39f43428af1d7ebf4097198f4d5d806d37f5ed8cb10f5"
+    },
+    "Licenses/EnglishGB/LGPL-2.1.txt": {
+      "bytes": 26419,
+      "sha256": "20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95"
+    },
+    "Licenses/EnglishGB/LICENSE-en-GB.txt": {
+      "bytes": 15122,
+      "sha256": "df84246204e3c54cd24aebbc23714235f5fc41d754d53b65444a2afbf070130f"
+    }
+  },
+  "ianaTLDs": {
+    "source": "https://data.iana.org/TLD/tlds-alpha-by-domain.txt",
+    "version": "# Version 2026100900, Last Updated Fri Oct  9 07:07:01 2026 UTC",
+    "changes": "Unchanged factual list of delegated root-zone names; offline syntax recognition only."
+  },
+  "russianModern": {
+    "repository": "https://github.com/Goudron/ru-spelling-dictionary",
+    "commit": "0f983e6b1950e240f5512974a5f146ea56f64bed",
+    "release": "1.0.9",
+    "license": "MPL-2.0",
+    "imported": "2026-10-12",
+    "changes": "Source data unchanged (KOI8-R); filenames ru_RU renamed ru_modern. Queries are encoded to KOI8-R in memory. Full editable source data and license included."
+  },
+  "englishBritish": {
+    "repository": "https://github.com/LibreOffice/dictionaries",
+    "commit": "32b006a2c22a4ac7e8ed3f03346f7b3d85a970a4",
+    "license": "LGPL, see README_en_GB.txt and packaged license texts",
+    "imported": "2026-10-12",
+    "changes": "en_GB.aff/dic unchanged; supplementary British spellings and inflections."
+  }
+}

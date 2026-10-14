@@ -1,0 +1,16 @@
+# Swift and Xcode
+.build/
+.swiftpm/
+Build/
+*.xcuserstate
+
+# Local releases and private audit material (attach verified files to Releases)
+Releases/
+Audits/
+Backups/
+
+# Local machine files
+.DS_Store
+*.log
+.vscode/
+.idea/

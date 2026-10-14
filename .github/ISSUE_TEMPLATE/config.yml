@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security / Безопасность
+    url: https://github.com/Nazhmetdinov/trump-switcher/security
+    about: Report vulnerabilities privately when possible / Сообщайте об уязвимостях приватно
