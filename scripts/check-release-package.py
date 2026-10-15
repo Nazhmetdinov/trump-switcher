@@ -17,7 +17,7 @@ info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
 assert info["CFBundleIdentifier"] == "local.trumpswitcher.mac"
 assert info["CFBundleExecutable"] == "TrumpSwitcher"
 assert info["LSMinimumSystemVersion"] == "13.0"
-assert info["CFBundleShortVersionString"] == "0.6.32" and info["CFBundleVersion"] == "71"
+assert info["CFBundleShortVersionString"] == "0.6.33" and info["CFBundleVersion"] == "72"
 binary = app / "Contents/MacOS/TrumpSwitcher"
 assert sorted(p.name for p in binary.parent.iterdir()) == ["TrumpSwitcher"]
 subprocess.run(["/usr/bin/codesign", "--verify", "--strict", str(app)], check=True)
@@ -42,7 +42,22 @@ for scale, suffix in [(1, ""), (2, "@2x"), (3, "@3x")]:
     assert png[:8] == b"\x89PNG\r\n\x1a\n"
     assert struct.unpack(">II", png[16:24]) == (22 * scale, 22 * scale)
     assert png[25] == 6, "Menu icon must be RGBA"
-assert (resources / "TrumpAppIcon.icns").read_bytes()[:4] == b"icns"
+icon = (resources / "TrumpAppIcon.icns").read_bytes()
+assert icon[:4] == b"icns" and struct.unpack_from(">I", icon, 4)[0] == len(icon)
+icon_entries = {}
+offset = 8
+while offset < len(icon):
+    tag = icon[offset:offset + 4]
+    size = struct.unpack_from(">I", icon, offset + 4)[0]
+    assert size >= 8 and offset + size <= len(icon) and tag not in icon_entries
+    icon_entries[tag] = icon[offset + 8:offset + size]
+    offset += size
+assert offset == len(icon)
+assert b"icp4" not in icon_entries and b"icp5" not in icon_entries and b"icp6" not in icon_entries
+assert icon_entries[b"ic04"].startswith(b"ARGB") and icon_entries[b"ic05"].startswith(b"ARGB"), \
+    "16/32-pixel ICNS entries must use native ARGB, not PNG"
+assert all(icon_entries[tag].startswith(b"\x89PNG\r\n\x1a\n") for tag in
+           (b"ic07", b"ic08", b"ic09", b"ic10", b"ic11", b"ic12", b"ic13", b"ic14"))
 dictionaries = resources / "Dictionaries"
 provenance = json.loads((dictionaries / "provenance.json").read_text())
 for name, pinned in provenance["files"].items():
