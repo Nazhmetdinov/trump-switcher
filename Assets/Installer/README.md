@@ -1,13 +1,13 @@
 # Trump Switcher installer artwork
 
-The Finder content area is 760 × 680 points. The native application and
-Applications-link icons are 128 points, centered at (185, 272) and (575, 272).
-The security-settings URL shortcut is centered at (600, 485). Its native Settings
+The Finder content area is 760 × 600 points. The native application and
+Applications-link icons are 128 points, centered at (185, 205) and (575, 205).
+The security-settings URL shortcut is centered at (600, 420). Its native Settings
 icon is applied only to the staged data file, preserving the signed app bundle.
 Only the typography, arrow, privacy footer, and background are raster artwork.
 `preview.png` is a composited layout preview, not a Finder screenshot.
 
-`background.tiff` includes 760 × 680 and 1520 × 1360 representations, both at
+`background.tiff` includes 760 × 600 and 1520 × 1200 representations, both at
 the same logical size. Finder loads this embedded file through the volume's
 own background alias; no path on the build computer is required at install time.
 
@@ -28,7 +28,7 @@ Set `TRUMP_DMG_ONLY=1` to retain the ZIP archive when re-styling an existing
 release. The package script checks the embedded application's complete file
 inventory and code signature, the three visible items, Applications symlink,
 the exact settings URL, background, icon locations, and window settings.
-The `-setup2` DMG name distinguishes the revised installer from the original
+The `-setup3` DMG name distinguishes the revised installer from the original
 published artifact without changing the application or its signature.
 
 The data-only `.url` opens Privacy & Security on a user double-click, including
@@ -41,3 +41,8 @@ Build-tool documentation: [dmgbuild](https://dmgbuild.readthedocs.io/en/latest/s
 [ds_store](https://github.com/dmgbuild/ds_store),
 [mac_alias](https://github.com/dmgbuild/mac_alias).
 These tools are not bundled with or used by Trump Switcher at runtime.
+
+The 760 × 632 Finder window includes a 32-point title bar. The 600-point
+artwork leaves a bottom margin and all content fits without scrolling. Native
+file labels sit on light plates for contrast. The art renderer rejects text
+that falls outside the canvas.

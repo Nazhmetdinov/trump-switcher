@@ -15,8 +15,8 @@ from mac_alias import Alias
 image = Path(sys.argv[1]).resolve()
 source = Path(sys.argv[2]).resolve()
 shortcut_name = "Настройки безопасности.url"
-expected_positions = {"Trump Switcher.app": (185, 272), "Программы": (575, 272),
-                      shortcut_name: (600, 485)}
+expected_positions = {"Trump Switcher.app": (185, 205), "Программы": (575, 205),
+                      shortcut_name: (600, 420)}
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix="trumpswitcher-image-check-") as tempora
             positions = {name: store[unicodedata.normalize("NFD", name)]["Iloc"]
                          for name in expected_positions}
             assert positions == expected_positions, positions
-            assert window["WindowBounds"].endswith("{760, 680}}"), window
+            assert window["WindowBounds"].endswith("{760, 632}}"), window
             assert not any(window[key] for key in ["ShowToolbar", "ShowSidebar",
                                                   "ShowStatusBar", "ShowPathbar", "ShowTabView"])
             assert icons["backgroundType"] == 2

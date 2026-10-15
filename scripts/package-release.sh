@@ -13,7 +13,7 @@ codesign --verify --strict "$APP"
 APP_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 APP_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Contents/Info.plist")"
 RELEASE_NAME="TrumpSwitcher-${APP_VERSION}-build${APP_BUILD}-AppleSilicon"
-INSTALLER_NAME="${RELEASE_NAME}-setup2"
+INSTALLER_NAME="${RELEASE_NAME}-setup3"
 mkdir -p Releases
 RELEASE_STAGE="$(mktemp -d "${TMPDIR:-/tmp}/trumpswitcher-release-XXXXXX")"
 trap 'rm -rf "$RELEASE_STAGE"' EXIT

@@ -17,7 +17,9 @@ hide = [".Установка.txt"]
 hide_extensions = [security_shortcut.name]
 icon = str(root / "Assets/TrumpAppIcon.icns")
 background = str(root / "Assets/Installer/background.tiff")
-window_rect = ((160, 100), (760, 680))
+
+# WindowBounds includes the 32-point Finder title bar above the 600-point canvas.
+window_rect = ((120, 64), (760, 632))
 default_view = "icon-view"
 show_status_bar = False
 show_tab_view = False
@@ -32,5 +34,5 @@ icon_size = 128
 text_size = 14
 label_pos = "bottom"
 show_icon_preview = False
-icon_locations = {"Trump Switcher.app": (185, 272), "Программы": (575, 272),
-                  unicodedata.normalize("NFD", security_shortcut.name): (600, 485)}
+icon_locations = {"Trump Switcher.app": (185, 205), "Программы": (575, 205),
+                  unicodedata.normalize("NFD", security_shortcut.name): (600, 420)}

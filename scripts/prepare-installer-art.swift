@@ -6,7 +6,7 @@ let root = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
 let output = root.appendingPathComponent("Assets/Installer", isDirectory: true)
 try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 let width: CGFloat = 760
-let height: CGFloat = 680
+let height: CGFloat = 600
 
 func color(_ value: UInt32, alpha: CGFloat = 1) -> NSColor {
     NSColor(srgbRed: CGFloat((value >> 16) & 255) / 255,
@@ -25,8 +25,12 @@ func text(_ string: String, x: CGFloat, y: CGFloat, size: CGFloat,
         .foregroundColor: ink, .kern: tracking
     ]
     let value = NSAttributedString(string: string, attributes: attributes)
-    value.draw(at: NSPoint(x: centered ? x - value.size().width / 2 : x,
-                          y: height - y - value.size().height))
+    let origin = NSPoint(x: centered ? x - value.size().width / 2 : x,
+                         y: height - y - value.size().height)
+    precondition(origin.x >= 0 && origin.y >= 0 &&
+                 origin.x + value.size().width <= width && y >= 0,
+                 "Installer text exceeds the canvas: \(string)")
+    value.draw(at: origin)
 }
 
 func path(_ points: [(CGFloat, CGFloat)], ink: NSColor, line: CGFloat) {
@@ -54,70 +58,75 @@ func background() {
         arc.lineWidth = 1
         cream.withAlphaComponent(opacity).setStroke(); arc.stroke()
     }
-    text("Trump Switcher", x: 48, y: 37, size: 35, weight: .bold, tracking: -1)
-    text("Пишите свободно. Раскладку исправим.", x: 49, y: 87, size: 17, ink: muted)
+    text("Trump Switcher", x: 48, y: 24, size: 32, weight: .bold, tracking: -1)
+    text("Пишите свободно. Раскладку исправим.", x: 49, y: 69, size: 16, ink: muted)
 
-    let badge = NSBezierPath(roundedRect: NSRect(x: 610, y: height - 79,
+    let badge = NSBezierPath(roundedRect: NSRect(x: 610, y: height - 66,
                                                 width: 102, height: 32),
                              xRadius: 16, yRadius: 16)
     cream.withAlphaComponent(0.065).setFill(); badge.fill()
-    text("RU  ⇄  EN", x: 661, y: 55, size: 12, weight: .semibold,
+    text("RU  ⇄  EN", x: 661, y: 42, size: 12, weight: .semibold,
          ink: gold, centered: true, tracking: 0.5)
 
-    text("ПЕРЕТАЩИТЕ В «ПРОГРАММЫ»", x: 380, y: 160, size: 12,
+    text("ПЕРЕТАЩИТЕ В «ПРОГРАММЫ»", x: 380, y: 118, size: 12,
          weight: .semibold, ink: muted, centered: true, tracking: 1.1)
 
     let arrow = NSBezierPath()
-    arrow.move(to: NSPoint(x: 304, y: height - 274))
-    arrow.curve(to: NSPoint(x: 455, y: height - 274),
-                controlPoint1: NSPoint(x: 351, y: height - 249),
-                controlPoint2: NSPoint(x: 409, y: height - 249))
+    arrow.move(to: NSPoint(x: 304, y: height - 205))
+    arrow.curve(to: NSPoint(x: 455, y: height - 205),
+                controlPoint1: NSPoint(x: 351, y: height - 180),
+                controlPoint2: NSPoint(x: 409, y: height - 180))
     arrow.lineWidth = 3
     arrow.lineCapStyle = .round
     gold.setStroke(); arrow.stroke()
-    path([(443, 260), (455, 274), (437, 277)], ink: gold, line: 3)
+    path([(443, 191), (455, 205), (437, 208)], ink: gold, line: 3)
 
-    text("Затем откройте Trump Switcher из «Программ».", x: 380, y: 365,
+    // Finder supplies the real file labels in black; light plates retain contrast.
+    for (x, y, w) in [(CGFloat(185), CGFloat(277), CGFloat(200)),
+                       (575, 277, 160), (600, 492, 220)] {
+        let plate = NSBezierPath(roundedRect: NSRect(x: x - w / 2, y: height - y - 30,
+                                                    width: w, height: 30),
+                                 xRadius: 10, yRadius: 10)
+        cream.setFill(); plate.fill()
+    }
+
+    text("Затем откройте Trump Switcher из «Программ».", x: 380, y: 319,
          size: 14, ink: muted, centered: true)
 
-    path([(48, 404.5), (712, 404.5)], ink: cream.withAlphaComponent(0.11), line: 1)
+    path([(48, 350.5), (712, 350.5)], ink: cream.withAlphaComponent(0.11), line: 1)
 
-    text("macOS не открывает приложение?", x: 48, y: 437,
-         size: 20, weight: .semibold)
-    text("Откройте настройки значком справа.", x: 48, y: 478, size: 15, ink: muted)
-    text("Нажмите «Всё равно открыть»", x: 48, y: 503, size: 15, ink: cream)
-    text("и подтвердите запуск Trump Switcher.", x: 48, y: 528, size: 15, ink: muted)
-    text("Только если вы доверяете скачанному приложению.", x: 48, y: 565,
+    text("macOS не открывает приложение?", x: 48, y: 374,
+         size: 19, weight: .semibold)
+    text("Откройте настройки значком справа.", x: 48, y: 412, size: 15, ink: muted)
+    text("Нажмите «Всё равно открыть»", x: 48, y: 435, size: 15, ink: cream)
+    text("и подтвердите запуск Trump Switcher.", x: 48, y: 458, size: 15, ink: muted)
+    text("Только если вы доверяете скачанному приложению.", x: 48, y: 491,
          size: 11, ink: muted)
-    path([(48, 604.5), (712, 604.5)], ink: cream.withAlphaComponent(0.11), line: 1)
+    path([(48, 535.5), (712, 535.5)], ink: cream.withAlphaComponent(0.11), line: 1)
 
     // Shield + lock: privacy is a first-class part of the visual identity.
-    NSGraphicsContext.saveGraphicsState()
-    let footerTransform = AffineTransform(translationByX: 0, byY: -200)
-    (footerTransform as NSAffineTransform).concat()
     let shield = NSBezierPath()
-    shield.move(to: NSPoint(x: 57, y: height - 424))
-    shield.line(to: NSPoint(x: 66, y: height - 428))
-    shield.line(to: NSPoint(x: 66, y: height - 436))
-    shield.curve(to: NSPoint(x: 57, y: height - 447),
-                 controlPoint1: NSPoint(x: 66, y: height - 442),
-                 controlPoint2: NSPoint(x: 61, y: height - 445))
-    shield.curve(to: NSPoint(x: 48, y: height - 436),
-                 controlPoint1: NSPoint(x: 53, y: height - 445),
-                 controlPoint2: NSPoint(x: 48, y: height - 442))
-    shield.line(to: NSPoint(x: 48, y: height - 428)); shield.close()
+    shield.move(to: NSPoint(x: 57, y: height - 551))
+    shield.line(to: NSPoint(x: 66, y: height - 555))
+    shield.line(to: NSPoint(x: 66, y: height - 563))
+    shield.curve(to: NSPoint(x: 57, y: height - 574),
+                 controlPoint1: NSPoint(x: 66, y: height - 569),
+                 controlPoint2: NSPoint(x: 61, y: height - 572))
+    shield.curve(to: NSPoint(x: 48, y: height - 563),
+                 controlPoint1: NSPoint(x: 53, y: height - 572),
+                 controlPoint2: NSPoint(x: 48, y: height - 569))
+    shield.line(to: NSPoint(x: 48, y: height - 555)); shield.close()
     shield.lineWidth = 1.5; gold.setStroke(); shield.stroke()
-    let lock = NSBezierPath(roundedRect: NSRect(x: 54, y: height - 439,
+    let lock = NSBezierPath(roundedRect: NSRect(x: 54, y: height - 566,
                                                width: 6, height: 5), xRadius: 1, yRadius: 1)
     gold.setFill(); lock.fill()
-    let shackle = NSBezierPath(roundedRect: NSRect(x: 55, y: height - 436,
+    let shackle = NSBezierPath(roundedRect: NSRect(x: 55, y: height - 563,
                                                   width: 4, height: 6), xRadius: 2, yRadius: 2)
     shackle.lineWidth = 1; gold.setStroke(); shackle.stroke()
-    text("Ваш текст остаётся на вашем Mac", x: 80, y: 419, size: 14, weight: .semibold)
-    text("Без интернета, облака и истории набора.", x: 80, y: 441, size: 12, ink: muted)
-    text("macOS 13+  ·  Apple Silicon", x: 628, y: 438, size: 11,
+    text("Ваш текст остаётся на вашем Mac", x: 80, y: 546, size: 14, weight: .semibold)
+    text("Без интернета, облака и истории набора.", x: 80, y: 568, size: 12, ink: muted)
+    text("macOS 13+  ·  Apple Silicon", x: 628, y: 567, size: 11,
          ink: muted, centered: true)
-    NSGraphicsContext.restoreGraphicsState()
 }
 
 func render(scale: Int, preview: Bool = false) -> NSBitmapImageRep {
@@ -137,14 +146,13 @@ func render(scale: Int, preview: Bool = false) -> NSBitmapImageRep {
         let folder = NSImage(contentsOfFile: "/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ApplicationsFolderIcon.icns")
             ?? NSWorkspace.shared.icon(forFile: "/Applications")
         for (image, x) in [(app, CGFloat(185)), (folder, CGFloat(575))] {
-            image.draw(in: NSRect(x: x - 64, y: height - 272 - 64, width: 128, height: 128))
+            image.draw(in: NSRect(x: x - 64, y: height - 205 - 64, width: 128, height: 128))
         }
-        text("Trump Switcher", x: 185, y: 341, size: 14, centered: true)
-        text("Программы", x: 575, y: 341, size: 14, centered: true)
+        text("Trump Switcher", x: 185, y: 281, size: 14, ink: color(0x172231), centered: true)
+        text("Программы", x: 575, y: 281, size: 14, ink: color(0x172231), centered: true)
         let settings = NSImage(contentsOfFile: "/System/Applications/System Settings.app/Contents/Resources/Settings.icns")!
-        settings.draw(in: NSRect(x: 536, y: height - 485 - 64, width: 128, height: 128))
-        text("Настройки", x: 600, y: 554, size: 14, centered: true)
-        text("безопасности", x: 600, y: 573, size: 14, centered: true)
+        settings.draw(in: NSRect(x: 536, y: height - 420 - 64, width: 128, height: 128))
+        text("Настройки безопасности", x: 600, y: 496, size: 14, ink: color(0x172231), centered: true)
     }
     NSGraphicsContext.restoreGraphicsState()
     return rep
