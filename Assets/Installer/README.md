@@ -1,11 +1,13 @@
 # Trump Switcher installer artwork
 
-The Finder content area is 760 × 480 points. The native application and
+The Finder content area is 760 × 680 points. The native application and
 Applications-link icons are 128 points, centered at (185, 272) and (575, 272).
+The security-settings URL shortcut is centered at (600, 485). Its native Settings
+icon is applied only to the staged data file, preserving the signed app bundle.
 Only the typography, arrow, privacy footer, and background are raster artwork.
 `preview.png` is a composited layout preview, not a Finder screenshot.
 
-`background.tiff` includes 760 × 480 and 1520 × 960 representations, both at
+`background.tiff` includes 760 × 680 and 1520 × 1360 representations, both at
 the same logical size. Finder loads this embedded file through the volume's
 own background alias; no path on the build computer is required at install time.
 
@@ -24,8 +26,16 @@ DMGBUILD_PYTHON=/path/to/packaging/python scripts/package-release.sh '/path/to/T
 
 Set `TRUMP_DMG_ONLY=1` to retain the ZIP archive when re-styling an existing
 release. The package script checks the embedded application's complete file
-inventory and code signature, the two visible items, Applications symlink,
-background, icon locations, and window settings before publishing the image.
+inventory and code signature, the three visible items, Applications symlink,
+the exact settings URL, background, icon locations, and window settings.
+The `-setup2` DMG name distinguishes the revised installer from the original
+published artifact without changing the application or its signature.
+
+The data-only `.url` opens Privacy & Security on a user double-click, including
+before the app has permission to launch. It cannot open automatically on mount
+or approve Gatekeeper, and never removes quarantine or changes security settings.
+Users must first attempt to launch the copied app for its Open Anyway entry to
+appear. The shortcut pattern is also used by [Fuji](https://github.com/Lazza/Fuji/blob/master/packaging/Full%20Disk%20Access%20Settings.url).
 
 Build-tool documentation: [dmgbuild](https://dmgbuild.readthedocs.io/en/latest/settings.html),
 [ds_store](https://github.com/dmgbuild/ds_store),

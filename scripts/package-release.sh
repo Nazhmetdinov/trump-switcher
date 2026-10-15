@@ -13,6 +13,7 @@ codesign --verify --strict "$APP"
 APP_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 APP_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Contents/Info.plist")"
 RELEASE_NAME="TrumpSwitcher-${APP_VERSION}-build${APP_BUILD}-AppleSilicon"
+INSTALLER_NAME="${RELEASE_NAME}-setup2"
 mkdir -p Releases
 RELEASE_STAGE="$(mktemp -d "${TMPDIR:-/tmp}/trumpswitcher-release-XXXXXX")"
 trap 'rm -rf "$RELEASE_STAGE"' EXIT
@@ -20,6 +21,9 @@ PAYLOAD="$RELEASE_STAGE/payload"
 mkdir -p "$PAYLOAD"
 ditto "$APP" "$PAYLOAD/Trump Switcher.app"
 codesign --verify --strict "$PAYLOAD/Trump Switcher.app"
+cp 'Assets/Installer/Настройки безопасности.url' "$PAYLOAD/Настройки безопасности.url"
+swift -module-cache-path "$PWD/.build/installer-module-cache" \
+    scripts/prepare-installer-shortcut.swift "$PAYLOAD/Настройки безопасности.url"
 cat > "$PAYLOAD/Установка.txt" <<'TEXT'
 Trump Switcher — установка
 
@@ -29,7 +33,10 @@ Trump Switcher — установка
 2. Перетащите Trump Switcher в папку «Программы» рядом.
    Если старая версия уже установлена, подтвердите замену приложения.
 3. Запустите Trump Switcher из папки «Программы».
-4. Если программа просит доступ, нажмите её кнопку разрешений macOS и
+4. Если macOS блокирует запуск непроверенного приложения, откройте ярлык
+   «Настройки безопасности» в этом образе. Если вы доверяете скачанной копии,
+   нажмите «Всё равно открыть» для Trump Switcher и подтвердите запуск.
+5. Если программа просит доступ, нажмите её кнопку разрешений macOS и
    включите Trump Switcher в открывшемся системном списке. После обновления
    macOS может потребовать заново добавить приложение в этот список.
 
@@ -48,10 +55,11 @@ TEXT
     -D "root=$PWD" \
     -D "app=$PAYLOAD/Trump Switcher.app" \
     -D "instructions=$PAYLOAD/Установка.txt" \
-    'Trump Switcher' "$RELEASE_STAGE/$RELEASE_NAME.dmg"
-hdiutil verify "$RELEASE_STAGE/$RELEASE_NAME.dmg"
+    -D "security_shortcut=$PAYLOAD/Настройки безопасности.url" \
+    'Trump Switcher' "$RELEASE_STAGE/$INSTALLER_NAME.dmg"
+hdiutil verify "$RELEASE_STAGE/$INSTALLER_NAME.dmg"
 "$DMGBUILD_PYTHON" scripts/check-installer-layout.py \
-    "$RELEASE_STAGE/$RELEASE_NAME.dmg" "$APP"
+    "$RELEASE_STAGE/$INSTALLER_NAME.dmg" "$APP"
 if [[ "${TRUMP_DMG_ONLY:-0}" == 1 ]]; then
     # Re-style an existing release without changing its verified app archive.
     test -s "Releases/$RELEASE_NAME.zip"
@@ -60,12 +68,12 @@ else
     ditto -c -k --sequesterRsrc --keepParent "$APP" "$RELEASE_STAGE/$RELEASE_NAME.zip"
     unzip -tq "$RELEASE_STAGE/$RELEASE_NAME.zip"
 fi
-mv -f "$RELEASE_STAGE/$RELEASE_NAME.dmg" "Releases/$RELEASE_NAME.dmg"
+mv -f "$RELEASE_STAGE/$INSTALLER_NAME.dmg" "Releases/$INSTALLER_NAME.dmg"
 if [[ "${TRUMP_DMG_ONLY:-0}" != 1 ]]; then
     mv -f "$RELEASE_STAGE/$RELEASE_NAME.zip" "Releases/$RELEASE_NAME.zip"
 fi
 (
     cd Releases
-    shasum -a 256 "$RELEASE_NAME.dmg" "$RELEASE_NAME.zip" > "$RELEASE_NAME.sha256"
+    shasum -a 256 "$INSTALLER_NAME.dmg" "$RELEASE_NAME.zip" > "$INSTALLER_NAME.sha256"
 )
-printf 'Installer: %s/Releases/%s.dmg\n' "$PWD" "$RELEASE_NAME"
+printf 'Installer: %s/Releases/%s.dmg\n' "$PWD" "$INSTALLER_NAME"

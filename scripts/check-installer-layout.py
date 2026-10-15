@@ -7,13 +7,16 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import unicodedata
 
 from ds_store import DSStore
 from mac_alias import Alias
 
 image = Path(sys.argv[1]).resolve()
 source = Path(sys.argv[2]).resolve()
-expected_positions = {"Trump Switcher.app": (185, 272), "Программы": (575, 272)}
+shortcut_name = "Настройки безопасности.url"
+expected_positions = {"Trump Switcher.app": (185, 272), "Программы": (575, 272),
+                      shortcut_name: (600, 485)}
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -33,14 +36,17 @@ with tempfile.TemporaryDirectory(prefix="trumpswitcher-image-check-") as tempora
         assert source_files == image_files, "Image application differs from release"
         assert (mount / "Программы").is_symlink()
         assert os.readlink(mount / "Программы") == "/Applications"
-        visible = sorted(p.name for p in mount.iterdir() if not p.name.startswith("."))
+        # HFS+ decomposes characters such as Russian й in on-disk names.
+        visible = sorted(unicodedata.normalize("NFC", p.name)
+                         for p in mount.iterdir() if not p.name.startswith("."))
         assert visible == sorted(expected_positions), visible
         with DSStore.open(str(mount / ".DS_Store"), "r") as store:
             window = store["."]["bwsp"]
             icons = store["."]["icvp"]
-            positions = {name: store[name]["Iloc"] for name in expected_positions}
+            positions = {name: store[unicodedata.normalize("NFD", name)]["Iloc"]
+                         for name in expected_positions}
             assert positions == expected_positions, positions
-            assert window["WindowBounds"].endswith("{760, 480}}"), window
+            assert window["WindowBounds"].endswith("{760, 680}}"), window
             assert not any(window[key] for key in ["ShowToolbar", "ShowSidebar",
                                                   "ShowStatusBar", "ShowPathbar", "ShowTabView"])
             assert icons["backgroundType"] == 2
@@ -51,11 +57,19 @@ with tempfile.TemporaryDirectory(prefix="trumpswitcher-image-check-") as tempora
         root = Path(__file__).resolve().parent.parent
         assert digest(mount / ".background.tiff") == digest(root / "Assets/Installer/background.tiff")
         assert (mount / ".Установка.txt").is_file()
+        shortcut = mount / shortcut_name
+        assert shortcut.read_text() == (
+            "[InternetShortcut]\n"
+            "URL=x-apple.systempreferences:com.apple.preference.security?General\n")
+        assert not (shortcut.stat().st_mode & 0o111), "Shortcut must not be executable"
+        subprocess.run(["xattr", "-p", "com.apple.ResourceFork", str(shortcut)],
+                       check=True, stdout=subprocess.DEVNULL)
         report = {"application_files_identical": len(source_files),
                   "application_signature_valid": True, "applications_link_valid": True,
                   "visible_items": visible, "icon_positions": positions,
                   "window_bounds": window["WindowBounds"],
                   "background_embedded": True,
+                  "security_shortcut_valid": True,
                   "image_sha256": digest(image), "scope": "Read-only image inspection; no application launch or Finder UI automation"}
         print(json.dumps(report, ensure_ascii=False, indent=2))
     finally:

@@ -6,7 +6,7 @@ let root = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
 let output = root.appendingPathComponent("Assets/Installer", isDirectory: true)
 try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 let width: CGFloat = 760
-let height: CGFloat = 480
+let height: CGFloat = 680
 
 func color(_ value: UInt32, alpha: CGFloat = 1) -> NSColor {
     NSColor(srgbRed: CGFloat((value >> 16) & 255) / 255,
@@ -82,7 +82,19 @@ func background() {
 
     path([(48, 404.5), (712, 404.5)], ink: cream.withAlphaComponent(0.11), line: 1)
 
+    text("macOS не открывает приложение?", x: 48, y: 437,
+         size: 20, weight: .semibold)
+    text("Откройте настройки значком справа.", x: 48, y: 478, size: 15, ink: muted)
+    text("Нажмите «Всё равно открыть»", x: 48, y: 503, size: 15, ink: cream)
+    text("и подтвердите запуск Trump Switcher.", x: 48, y: 528, size: 15, ink: muted)
+    text("Только если вы доверяете скачанному приложению.", x: 48, y: 565,
+         size: 11, ink: muted)
+    path([(48, 604.5), (712, 604.5)], ink: cream.withAlphaComponent(0.11), line: 1)
+
     // Shield + lock: privacy is a first-class part of the visual identity.
+    NSGraphicsContext.saveGraphicsState()
+    let footerTransform = AffineTransform(translationByX: 0, byY: -200)
+    (footerTransform as NSAffineTransform).concat()
     let shield = NSBezierPath()
     shield.move(to: NSPoint(x: 57, y: height - 424))
     shield.line(to: NSPoint(x: 66, y: height - 428))
@@ -105,6 +117,7 @@ func background() {
     text("Без интернета, облака и истории набора.", x: 80, y: 441, size: 12, ink: muted)
     text("macOS 13+  ·  Apple Silicon", x: 628, y: 438, size: 11,
          ink: muted, centered: true)
+    NSGraphicsContext.restoreGraphicsState()
 }
 
 func render(scale: Int, preview: Bool = false) -> NSBitmapImageRep {
@@ -128,6 +141,10 @@ func render(scale: Int, preview: Bool = false) -> NSBitmapImageRep {
         }
         text("Trump Switcher", x: 185, y: 341, size: 14, centered: true)
         text("Программы", x: 575, y: 341, size: 14, centered: true)
+        let settings = NSImage(contentsOfFile: "/System/Applications/System Settings.app/Contents/Resources/Settings.icns")!
+        settings.draw(in: NSRect(x: 536, y: height - 485 - 64, width: 128, height: 128))
+        text("Настройки", x: 600, y: 554, size: 14, centered: true)
+        text("безопасности", x: 600, y: 573, size: 14, centered: true)
     }
     NSGraphicsContext.restoreGraphicsState()
     return rep
@@ -139,7 +156,8 @@ for scale in 1...2 {
     try rep.representation(using: .png, properties: [:])!.write(to: output.appendingPathComponent(name))
 }
 let representations = [render(scale: 1), render(scale: 2)]
-try NSBitmapImageRep.representationOfImageReps(in: representations, using: .tiff, properties: [:])!
+try NSBitmapImageRep.representationOfImageReps(in: representations, using: .tiff,
+    properties: [.compressionMethod: NSNumber(value: NSBitmapImageRep.TIFFCompression.lzw.rawValue)])!
     .write(to: output.appendingPathComponent("background.tiff"))
 try render(scale: 2, preview: true).representation(using: .png, properties: [:])!
     .write(to: output.appendingPathComponent("preview.png"))
