@@ -3,8 +3,11 @@
 The app icon is a new illustration generated independently for this project.
 `TrumpAppIcon-original-generated.png` is the local source. The deterministic
 AppKit script `scripts/prepare-app-icon.swift` crops and masks it to a clean
-rounded tile at the ten standard sizes. `scripts/pack-app-icon.py` packs those
-PNG representations into `TrumpAppIcon.icns`.
+rounded tile at larger sizes and draws a simplified portrait at 16–64 pixels.
+`scripts/pack-app-icon.py` packs the two smallest 1× representations as native
+ARGB and the larger/Retina representations as PNG into `TrumpAppIcon.icns`.
+This keeps small icons legible in macOS permission lists and avoids the colour
+noise macOS displays for PNG payloads under the legacy `icp4`/`icp5` tags.
 
 The menu-bar icon is a pair of perfectly mirrored arrows, drawn by
 `scripts/prepare-menu-icon.swift` at 22 pt for 1×, 2× and 3× screens.
