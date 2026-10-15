@@ -2,7 +2,7 @@
 
 The Finder content area is 760 × 600 points. The native application and
 Applications-link icons are 128 points, centered at (185, 205) and (575, 205).
-The security-settings URL shortcut is centered at (600, 420). Its native Settings
+The security-settings URL shortcut is centered at (600, 408). Its native Settings
 icon is applied only to the staged data file, preserving the signed app bundle.
 Only the typography, arrow, privacy footer, and background are raster artwork.
 `preview.png` is a composited layout preview, not a Finder screenshot.
@@ -28,7 +28,7 @@ Set `TRUMP_DMG_ONLY=1` to retain the ZIP archive when re-styling an existing
 release. The package script checks the embedded application's complete file
 inventory and code signature, the three visible items, Applications symlink,
 the exact settings URL, background, icon locations, and window settings.
-The `-setup3` DMG name distinguishes the revised installer from the original
+The `-setup4` DMG name distinguishes the revised installer from the original
 published artifact without changing the application or its signature.
 
 The data-only `.url` opens Privacy & Security on a user double-click, including
@@ -43,6 +43,9 @@ Build-tool documentation: [dmgbuild](https://dmgbuild.readthedocs.io/en/latest/s
 These tools are not bundled with or used by Trump Switcher at runtime.
 
 The 760 × 632 Finder window includes a 32-point title bar. The 600-point
-artwork leaves a bottom margin and all content fits without scrolling. Native
-file labels sit on light plates for contrast. The art renderer rejects text
-that falls outside the canvas.
+artwork leaves a bottom margin and all content fits without scrolling. White captions are rendered in the Retina artwork without plates. Finder
+keeps the real filenames and standard 14-point labels. Since picture backgrounds
+use black native labels, their area is solid black; the white captions sit below
+them without overlap. Do not shrink the native font below Finder’s supported
+range: it causes Finder to discard the entire icon-view configuration.
+The art renderer rejects text that falls outside the canvas.

@@ -16,7 +16,7 @@ image = Path(sys.argv[1]).resolve()
 source = Path(sys.argv[2]).resolve()
 shortcut_name = "Настройки безопасности.url"
 expected_positions = {"Trump Switcher.app": (185, 205), "Программы": (575, 205),
-                      shortcut_name: (600, 420)}
+                      shortcut_name: (600, 408)}
 
 def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()

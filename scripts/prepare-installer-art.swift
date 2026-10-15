@@ -47,8 +47,15 @@ func path(_ points: [(CGFloat, CGFloat)], ink: NSColor, line: CGFloat) {
 
 func background() {
     let rect = NSRect(x: 0, y: 0, width: width, height: height)
-    NSGradient(starting: color(0x101925), ending: color(0x26354A))!
-        .draw(in: rect, angle: 32)
+    // Finder fixes its file labels to black for picture backgrounds. Keep the
+    // label area genuinely black and place our white captions below the native
+    // text; filenames, accessibility names and drag behavior stay intact.
+    NSColor.black.setFill()
+    rect.fill()
+    let header = NSRect(x: 0, y: height - 270, width: width, height: 270)
+    NSGradient(starting: .black, ending: color(0x1E2C40))!.draw(in: header, angle: 90)
+    NSGraphicsContext.saveGraphicsState()
+    header.clip()
 
     // Restrained oversized arcs add depth without competing with the real icons.
     for (radius, opacity) in [(CGFloat(480), CGFloat(0.055)), (600, 0.035)] {
@@ -58,6 +65,7 @@ func background() {
         arc.lineWidth = 1
         cream.withAlphaComponent(opacity).setStroke(); arc.stroke()
     }
+    NSGraphicsContext.restoreGraphicsState()
     text("Trump Switcher", x: 48, y: 24, size: 32, weight: .bold, tracking: -1)
     text("Пишите свободно. Раскладку исправим.", x: 49, y: 69, size: 16, ink: muted)
 
@@ -81,19 +89,15 @@ func background() {
     gold.setStroke(); arrow.stroke()
     path([(443, 191), (455, 205), (437, 208)], ink: gold, line: 3)
 
-    // Finder supplies the real file labels in black; light plates retain contrast.
-    for (x, y, w) in [(CGFloat(185), CGFloat(277), CGFloat(200)),
-                       (575, 277, 160), (600, 492, 220)] {
-        let plate = NSBezierPath(roundedRect: NSRect(x: x - w / 2, y: height - y - 30,
-                                                    width: w, height: 30),
-                                 xRadius: 10, yRadius: 10)
-        cream.setFill(); plate.fill()
-    }
+    // Captions are part of the Retina artwork; Finder keeps the real file names.
+    text("Trump Switcher", x: 185, y: 299, size: 14, ink: .white, centered: true)
+    text("Программы", x: 575, y: 299, size: 14, ink: .white, centered: true)
+    text("Настройки безопасности", x: 600, y: 502, size: 14, ink: .white, centered: true)
 
-    text("Затем откройте Trump Switcher из «Программ».", x: 380, y: 319,
+    text("Затем откройте Trump Switcher из «Программ».", x: 380, y: 329,
          size: 14, ink: muted, centered: true)
 
-    path([(48, 350.5), (712, 350.5)], ink: cream.withAlphaComponent(0.11), line: 1)
+    path([(48, 357.5), (712, 357.5)], ink: cream.withAlphaComponent(0.11), line: 1)
 
     text("macOS не открывает приложение?", x: 48, y: 374,
          size: 19, weight: .semibold)
@@ -148,11 +152,8 @@ func render(scale: Int, preview: Bool = false) -> NSBitmapImageRep {
         for (image, x) in [(app, CGFloat(185)), (folder, CGFloat(575))] {
             image.draw(in: NSRect(x: x - 64, y: height - 205 - 64, width: 128, height: 128))
         }
-        text("Trump Switcher", x: 185, y: 281, size: 14, ink: color(0x172231), centered: true)
-        text("Программы", x: 575, y: 281, size: 14, ink: color(0x172231), centered: true)
         let settings = NSImage(contentsOfFile: "/System/Applications/System Settings.app/Contents/Resources/Settings.icns")!
-        settings.draw(in: NSRect(x: 536, y: height - 420 - 64, width: 128, height: 128))
-        text("Настройки безопасности", x: 600, y: 496, size: 14, ink: color(0x172231), centered: true)
+        settings.draw(in: NSRect(x: 536, y: height - 408 - 64, width: 128, height: 128))
     }
     NSGraphicsContext.restoreGraphicsState()
     return rep

@@ -35,4 +35,4 @@ text_size = 14
 label_pos = "bottom"
 show_icon_preview = False
 icon_locations = {"Trump Switcher.app": (185, 205), "Программы": (575, 205),
-                  unicodedata.normalize("NFD", security_shortcut.name): (600, 420)}
+                  unicodedata.normalize("NFD", security_shortcut.name): (600, 408)}
