@@ -1,5 +1,10 @@
 # История изменений / Changelog
 
+## 0.6.33 · build 72 · 2026-10-15
+
+- Исправлена пиксельная «рябь» значка в списках разрешений macOS и других местах, где система использует размер 16 или 32 пикселя: эти части ICNS теперь записаны в ожидаемом macOS формате ARGB.
+- Для малого размера нарисован упрощённый портрет; большая иконка приложения сохранена.
+
 ## 0.6.32 · build 71 · 2026-10-15
 
 - Подготовлен первый открытый выпуск для macOS 13+ на Apple Silicon.
@@ -13,6 +18,11 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.33 · build 72 · 2026-10-15
+
+- Fixed the garbled icon in macOS permission lists and other 16/32-pixel contexts by encoding those ICNS representations as native ARGB.
+- Added a simplified portrait for small sizes while retaining the full-size app icon.
 
 ## 0.6.32 · build 71 · 2026-10-15
 
