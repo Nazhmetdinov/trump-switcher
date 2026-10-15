@@ -22,7 +22,7 @@ Correction normally runs after Space; Enter and Tab are configurable boundaries.
 3. Start it from Applications and grant **Accessibility** permission when macOS asks. This permits the app to inspect the current word and type its correction.
 4. Open settings from the menu bar icon; launch at login is optional.
 
-The build is locally signed and **not Apple-notarized** yet. macOS may show an unidentified-developer warning on first launch. Use the standard system **Open** action for software you trust; the installer never changes security settings automatically.
+**First launch requires manual macOS approval.** This build is locally signed but **not Apple-notarized**. If macOS says it cannot verify the app, click **Done**, then open **System Settings → Privacy & Security**. In Security, choose **Open Anyway** specifically for Trump Switcher, then confirm **Open**. This creates a one-time exception for that app copy; do not disable Gatekeeper globally. Once it opens, check that Trump Switcher says it is ready. If Accessibility access is needed, use its permission button and enable Trump Switcher in the macOS list. See [Apple’s instructions](https://support.apple.com/en-us/102445).
 
 ## Privacy and limits
 
