@@ -1,5 +1,7 @@
 # Swift and Xcode
 .build/
+.build-intel/
+Assets/InstallerIntel/
 .swiftpm/
 Build/
 *.xcuserstate

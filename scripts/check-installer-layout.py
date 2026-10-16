@@ -14,6 +14,7 @@ from mac_alias import Alias
 
 image = Path(sys.argv[1]).resolve()
 source = Path(sys.argv[2]).resolve()
+artwork = Path(sys.argv[3]).resolve() if len(sys.argv) > 3 else Path(__file__).resolve().parent.parent / "Assets/Installer"
 shortcut_name = "Настройки безопасности.url"
 expected_positions = {"Trump Switcher.app": (185, 205), "Программы": (575, 205),
                       shortcut_name: (600, 408)}
@@ -54,8 +55,7 @@ with tempfile.TemporaryDirectory(prefix="trumpswitcher-image-check-") as tempora
             assert icons["arrangeBy"] == "none"
             alias = Alias.from_bytes(icons["backgroundImageAlias"])
             assert alias.target.filename == ".background.tiff", alias.target.filename
-        root = Path(__file__).resolve().parent.parent
-        assert digest(mount / ".background.tiff") == digest(root / "Assets/Installer/background.tiff")
+        assert digest(mount / ".background.tiff") == digest(artwork / "background.tiff")
         assert (mount / ".Установка.txt").is_file()
         shortcut = mount / shortcut_name
         assert shortcut.read_text() == (

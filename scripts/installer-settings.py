@@ -16,7 +16,7 @@ hide = [".Установка.txt"]
 # signed .app would make strict codesign verification reject the copied bundle.
 hide_extensions = [security_shortcut.name]
 icon = str(root / "Assets/TrumpAppIcon.icns")
-background = str(root / "Assets/Installer/background.tiff")
+background = str(Path(defines.get("artwork", str(root / "Assets/Installer"))).resolve() / "background.tiff")
 
 # WindowBounds includes the 32-point Finder title bar above the 600-point canvas.
 window_rect = ((120, 64), (760, 632))

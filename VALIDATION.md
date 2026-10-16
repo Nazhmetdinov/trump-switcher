@@ -1,4 +1,20 @@
-# Trump Switcher 0.5.0 verification — 2026-10-09
+# Trump Switcher verification
+
+## Intel release variant — 2026-10-16
+
+Version 0.6.34 build 73 was cross-compiled for x86_64 with the macOS 26.5 SDK
+and a macOS 13.0 deployment target. The bundle and DMG contain only x86_64
+application code. Strict ad-hoc code-signature verification passed; the package
+checker verified 19 pinned dictionary files, system-only linked libraries,
+the ICNS and menu icons, and the absence of interactive diagnostic flags.
+The Intel DMG passed `hdiutil verify`, exact 40-file application comparison,
+Finder layout and security-shortcut checks. The ZIP passed `unzip -tq`.
+
+This build Mac is Apple Silicon and has no Rosetta installation. The x86_64
+executable could not be launched here, so first launch, sandbox enforcement,
+Accessibility behavior and corrections on Intel hardware remain unverified.
+
+## 0.5.0 — 2026-10-09
 
 Final self-contained app: `Build/Trump Switcher.app`, bundle `local.trumpswitcher.mac`.
 Native GUI launch succeeded. Accessibility was restored for the final signature;

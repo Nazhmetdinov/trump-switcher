@@ -17,7 +17,7 @@ Correction normally runs after Space; Enter and Tab are configurable boundaries.
 
 ## Install
 
-1. Download the [latest DMG](https://github.com/Nazhmetdinov/trump-switcher/releases/latest) for **Apple Silicon (M1 or newer)** and **macOS 13+**.
+1. Download the DMG for your Mac: [Apple Silicon (M1 or newer)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.34/TrumpSwitcher-0.6.34-build73-AppleSilicon-setup4.dmg) or [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.34/TrumpSwitcher-0.6.34-build73-Intel-setup4.dmg). Requires **macOS 13+**.
 2. Open the image and drag **Trump Switcher** onto **Applications**.
 3. Start it from Applications and grant **Accessibility** permission when macOS asks. This permits the app to inspect the current word and type its correction.
 4. Open settings from the menu bar icon; launch at login is optional.
@@ -38,15 +38,18 @@ The code uses Swift, C and C++. The current build recipe requires macOS SDK **26
 
 ```bash
 bash scripts/build.sh
+# For Intel, build the separate x86_64 bundle after the standard build.
+bash scripts/build-intel.sh
 ```
 
 Packaging needs the build-only tools in `scripts/installer-requirements.txt`:
 
 ```bash
 DMGBUILD_PYTHON=/path/to/packaging/python bash scripts/package-release.sh
+TRUMP_ARCH=x86_64 DMGBUILD_PYTHON=/path/to/packaging/python bash scripts/package-release.sh "Build/Intel/Trump Switcher.app"
 ```
 
-The app is written to `Build/`; DMG and ZIP archives go to `Releases/`. `scripts/build.sh` runs the local checks. See [VALIDATION.md](VALIDATION.md) for their scope and limitations.
+The apps are written to `Build/` and `Build/Intel/`; DMG and ZIP archives go to `Releases/`. The Intel bundle is cross-compiled on Apple Silicon and checked for architecture, resources and signature; a launch on Intel hardware still needs separate confirmation. `scripts/build.sh` runs the standard local checks. See [VALIDATION.md](VALIDATION.md) for their scope and limitations.
 
 Original project code and documentation are [MIT-licensed](LICENSE). Dictionaries, Hunspell and adapted portions retain their separate terms and notices in [THIRD_PARTY.md](THIRD_PARTY.md). The new project icon is generated from independent local artwork; no stock image is distributed.
 

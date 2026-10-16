@@ -2,6 +2,7 @@
 """Check only the owned release bundle; no UI, event taps or other apps."""
 import hashlib
 import json
+import platform
 from pathlib import Path
 import plistlib
 import struct
@@ -13,6 +14,8 @@ if not __debug__:
     raise SystemExit("Release verification must run without Python optimization")
 
 app = Path(sys.argv[1]).resolve()
+expected_arch = sys.argv[2] if len(sys.argv) > 2 else "arm64"
+assert expected_arch in {"arm64", "x86_64"}, expected_arch
 info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
 assert info["CFBundleIdentifier"] == "local.trumpswitcher.mac"
 assert info["CFBundleExecutable"] == "TrumpSwitcher"
@@ -21,7 +24,7 @@ assert info["CFBundleShortVersionString"] == "0.6.34" and info["CFBundleVersion"
 binary = app / "Contents/MacOS/TrumpSwitcher"
 assert sorted(p.name for p in binary.parent.iterdir()) == ["TrumpSwitcher"]
 subprocess.run(["/usr/bin/codesign", "--verify", "--strict", str(app)], check=True)
-assert subprocess.check_output(["/usr/bin/lipo", "-archs", str(binary)], text=True).strip() == "arm64"
+assert subprocess.check_output(["/usr/bin/lipo", "-archs", str(binary)], text=True).strip() == expected_arch
 dependencies = subprocess.check_output(["/usr/bin/otool", "-L", str(binary)], text=True)
 for line in dependencies.splitlines()[1:]:
     dependency = line.strip().split(" (", 1)[0]
@@ -31,9 +34,10 @@ assert "minos 13.0" in load_commands and "sdk 26.5" in load_commands
 data = binary.read_bytes()
 for name in [b"--check-chrome-input", b"--check-input-pipeline", b"ChromeInputChecks", b"InputPipelineChecks"]:
     assert name not in data, "Interactive diagnostic shipped: " + name.decode()
-for flag in ["--check-chrome-input", "--check-input-pipeline"]:
-    result = subprocess.run([str(binary), flag], capture_output=True, text=True, timeout=10)
-    assert result.returncode == 2 and "Unsupported command" in result.stderr, flag
+if platform.machine() == expected_arch:
+    for flag in ["--check-chrome-input", "--check-input-pipeline"]:
+        result = subprocess.run([str(binary), flag], capture_output=True, text=True, timeout=10)
+        assert result.returncode == 2 and "Unsupported command" in result.stderr, flag
 resources = app / "Contents/Resources"
 assert sorted(p.name for p in resources.iterdir()) == [
     "Dictionaries", "TrumpAppIcon.icns", "TrumpMenuBar.png", "TrumpMenuBar@2x.png", "TrumpMenuBar@3x.png"]
@@ -68,6 +72,8 @@ with zipfile.ZipFile(dictionaries / "Licenses/Hunspell/Source.zip") as source:
     assert source.testzip() is None
     assert "Sources/Hunspell/COPYING.MPL" in source.namelist() or any(name.endswith("/COPYING.MPL") for name in source.namelist())
 print(json.dumps({"version": info["CFBundleShortVersionString"], "build": info["CFBundleVersion"],
-                  "architecture": "arm64", "minimumMacOS": info["LSMinimumSystemVersion"],
+                  "architecture": expected_arch, "minimumMacOS": info["LSMinimumSystemVersion"],
                   "binarySHA256": hashlib.sha256(data).hexdigest(), "pinnedFiles": len(provenance["files"]),
-                  "signature": "verified", "interactiveDiagnostics": "excluded", "uiOrExternalAppAccess": False}, indent=2))
+                  "signature": "verified", "interactiveDiagnostics": "excluded",
+                  "runtimeChecks": "passed" if platform.machine() == expected_arch else "requires target hardware",
+                  "uiOrExternalAppAccess": False}, indent=2))

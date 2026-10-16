@@ -15,6 +15,7 @@ Regenerate artwork on macOS:
 
 ```sh
 swift scripts/prepare-installer-art.swift "$PWD"
+swift scripts/prepare-installer-art.swift "$PWD" Intel
 ```
 
 Build the disk image with the packaging Python containing the pinned build-only
@@ -22,6 +23,7 @@ dependencies in `scripts/installer-requirements.txt`:
 
 ```sh
 DMGBUILD_PYTHON=/path/to/packaging/python scripts/package-release.sh '/path/to/Trump Switcher.app'
+TRUMP_ARCH=x86_64 DMGBUILD_PYTHON=/path/to/packaging/python bash scripts/package-release.sh 'Build/Intel/Trump Switcher.app'
 ```
 
 Set `TRUMP_DMG_ONLY=1` to retain the ZIP archive when re-styling an existing
@@ -29,7 +31,8 @@ release. The package script checks the embedded application's complete file
 inventory and code signature, the three visible items, Applications symlink,
 the exact settings URL, background, icon locations, and window settings.
 The `-setup4` DMG name distinguishes the revised installer from the original
-published artifact without changing the application or its signature.
+published artifact. The Intel variant has its own architecture-specific artwork
+under `Assets/InstallerIntel/`, generated locally and excluded from Git.
 
 The data-only `.url` opens Privacy & Security on a user double-click, including
 before the app has permission to launch. It cannot open automatically on mount

@@ -3,7 +3,8 @@ import AppKit
 // Native, resolution-independent artwork. The application and destination remain
 // real Finder icons; neither is baked into the installer background.
 let root = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
-let output = root.appendingPathComponent("Assets/Installer", isDirectory: true)
+let intel = CommandLine.arguments.count > 2 && CommandLine.arguments[2] == "Intel"
+let output = root.appendingPathComponent(intel ? "Assets/InstallerIntel" : "Assets/Installer", isDirectory: true)
 try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 let width: CGFloat = 760
 let height: CGFloat = 600
@@ -129,7 +130,7 @@ func background() {
     shackle.lineWidth = 1; gold.setStroke(); shackle.stroke()
     text("Ваш текст остаётся на вашем Mac", x: 80, y: 546, size: 14, weight: .semibold)
     text("Без интернета, облака и истории набора.", x: 80, y: 568, size: 12, ink: muted)
-    text("macOS 13+  ·  Apple Silicon", x: 628, y: 567, size: 11,
+    text(intel ? "macOS 13+  ·  Intel" : "macOS 13+  ·  Apple Silicon", x: 628, y: 567, size: 11,
          ink: muted, centered: true)
 }
 

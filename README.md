@@ -17,7 +17,7 @@ Trump Switcher исправляет слово, случайно набранн�
 
 ## Установка
 
-1. Скачайте [последний DMG](https://github.com/Nazhmetdinov/trump-switcher/releases/latest) для **Apple Silicon (M1 и новее)** и **macOS 13+**.
+1. Скачайте DMG для своего Mac: [Apple Silicon (M1 и новее)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.34/TrumpSwitcher-0.6.34-build73-AppleSilicon-setup4.dmg) или [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.34/TrumpSwitcher-0.6.34-build73-Intel-setup4.dmg). Нужна **macOS 13+**.
 2. Откройте образ и перетащите **Trump Switcher** в папку **«Программы»**.
 3. Запустите приложение из «Программ» и предоставьте доступ **«Универсальный доступ»** (Accessibility), когда macOS попросит. Он нужен для чтения текущего слова и отправки исправленного текста.
 4. Откройте настройки через значок в строке меню. Там можно включить запуск вместе с Mac.
@@ -38,15 +38,18 @@ Trump Switcher исправляет слово, случайно набранн�
 
 ```bash
 bash scripts/build.sh
+# Для Intel: после обычной сборки соберите отдельный пакет x86_64.
+bash scripts/build-intel.sh
 ```
 
 Для подготовки DMG нужны только локальные инструменты из `scripts/installer-requirements.txt`:
 
 ```bash
 DMGBUILD_PYTHON=/path/to/packaging/python bash scripts/package-release.sh
+TRUMP_ARCH=x86_64 DMGBUILD_PYTHON=/path/to/packaging/python bash scripts/package-release.sh "Build/Intel/Trump Switcher.app"
 ```
 
-Готовое приложение появляется в `Build/`, образ и ZIP — в `Releases/`. Проверки сборки запускаются через `scripts/build.sh`; их объём и ограничения описаны в [VALIDATION.md](VALIDATION.md).
+Готовые приложения появляются в `Build/` и `Build/Intel/`, образы и ZIP — в `Releases/`. Intel-пакет компилируется на Apple Silicon, проверяется по архитектуре, ресурсам и подписи; запуск на Intel Mac нужно подтвердить отдельно. Проверки обычной сборки запускаются через `scripts/build.sh`; их объём и ограничения описаны в [VALIDATION.md](VALIDATION.md).
 
 Собственный код и документация — [MIT](LICENSE). Словари, Hunspell и заимствованные фрагменты имеют отдельные лицензии и уведомления в [THIRD_PARTY.md](THIRD_PARTY.md). Новая иконка нарисована для этого проекта и воспроизводимо упаковывается из локального исходного изображения; стоковые изображения в публикацию не входят.
 

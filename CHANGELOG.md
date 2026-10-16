@@ -1,5 +1,10 @@
 # История изменений / Changelog
 
+## 0.6.34 · сборка для Intel · 2026-10-16
+
+- Добавлены отдельные DMG и ZIP для Mac с Intel (x86_64, macOS 13+); функциональный код и версия приложения не менялись.
+- Сборка и установщик прошли проверку архитектуры, подписи, ресурсов и контрольных сумм. Запуск на Intel Mac пока не проверен.
+
 ## 0.6.34 · build 73 · 2026-10-15
 
 - Во всех размерах иконки восстановлен единый исходный портрет: устранена подмена на упрощённый рисунок в настройках и системных списках.
@@ -23,6 +28,11 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.34 · Intel build · 2026-10-16
+
+- Added separate DMG and ZIP downloads for Intel Macs (x86_64, macOS 13+), without changing the app's functionality or version.
+- Verified architecture, signature, resources and checksums. A launch on Intel hardware has not yet been tested.
 
 ## 0.6.34 · build 73 · 2026-10-15
 
