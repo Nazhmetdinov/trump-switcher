@@ -5,8 +5,8 @@ cd "$(dirname "$0")/.."
 APP="${1:-$PWD/Build/Trump Switcher.app}"
 TARGET_ARCH="${TRUMP_ARCH:-arm64}"
 case "$TARGET_ARCH" in
-    arm64) RELEASE_ARCH="AppleSilicon"; PLATFORM_DESCRIPTION="Apple Silicon (M1 и новее)" ;;
-    x86_64) RELEASE_ARCH="Intel"; PLATFORM_DESCRIPTION="Intel (x86_64)" ;;
+    arm64) RELEASE_ARCH="AppleSilicon"; PLATFORM_DESCRIPTION="Apple Silicon (M1 и новее)"; VOLUME_NAME="Trump Switcher" ;;
+    x86_64) RELEASE_ARCH="Intel"; PLATFORM_DESCRIPTION="Intel (x86_64)"; VOLUME_NAME="Trump Switcher Intel" ;;
     *) echo "Unsupported architecture: $TARGET_ARCH" >&2; exit 1 ;;
 esac
 ARTWORK_DIR="$PWD/Assets/Installer"
@@ -23,6 +23,7 @@ APP_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$
 APP_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Contents/Info.plist")"
 RELEASE_NAME="TrumpSwitcher-${APP_VERSION}-build${APP_BUILD}-${RELEASE_ARCH}"
 INSTALLER_NAME="${RELEASE_NAME}-setup4"
+if [[ "$TARGET_ARCH" == x86_64 ]]; then INSTALLER_NAME="${RELEASE_NAME}-setup5"; fi
 mkdir -p Releases
 RELEASE_STAGE="$(mktemp -d "${TMPDIR:-/tmp}/trumpswitcher-release-XXXXXX")"
 trap 'rm -rf "$RELEASE_STAGE"' EXIT
@@ -66,7 +67,7 @@ TEXT
     -D "app=$PAYLOAD/Trump Switcher.app" \
     -D "instructions=$PAYLOAD/Установка.txt" \
     -D "security_shortcut=$PAYLOAD/Настройки безопасности.url" \
-    'Trump Switcher' "$RELEASE_STAGE/$INSTALLER_NAME.dmg"
+    "$VOLUME_NAME" "$RELEASE_STAGE/$INSTALLER_NAME.dmg"
 hdiutil verify "$RELEASE_STAGE/$INSTALLER_NAME.dmg"
 "$DMGBUILD_PYTHON" scripts/check-installer-layout.py \
     "$RELEASE_STAGE/$INSTALLER_NAME.dmg" "$APP" "$ARTWORK_DIR"

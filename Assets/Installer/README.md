@@ -30,8 +30,8 @@ Set `TRUMP_DMG_ONLY=1` to retain the ZIP archive when re-styling an existing
 release. The package script checks the embedded application's complete file
 inventory and code signature, the three visible items, Applications symlink,
 the exact settings URL, background, icon locations, and window settings.
-The `-setup4` DMG name distinguishes the revised installer from the original
-published artifact. The Intel variant has its own architecture-specific artwork
+The `-setup4` Apple Silicon and `-setup5` Intel DMG names distinguish the revised
+installers from the original published artifacts. The Intel variant has its own architecture-specific artwork
 under `Assets/InstallerIntel/`, generated locally and excluded from Git.
 
 The data-only `.url` opens Privacy & Security on a user double-click, including

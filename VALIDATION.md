@@ -9,6 +9,10 @@ checker verified 19 pinned dictionary files, system-only linked libraries,
 the ICNS and menu icons, and the absence of interactive diagnostic flags.
 The Intel DMG passed `hdiutil verify`, exact 40-file application comparison,
 Finder layout and security-shortcut checks. The ZIP passed `unzip -tq`.
+The revised `setup5` image embeds a Finder alias and bookmark pointing to its
+own `Trump Switcher Intel` volume. Its actual Finder window was visually checked
+while the Apple Silicon DMG was mounted concurrently; the full background and
+all three icons and captions were visible.
 
 This build Mac is Apple Silicon and has no Rosetta installation. The x86_64
 executable could not be launched here, so first launch, sandbox enforcement,

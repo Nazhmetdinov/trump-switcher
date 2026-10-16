@@ -15,6 +15,8 @@ from mac_alias import Alias
 image = Path(sys.argv[1]).resolve()
 source = Path(sys.argv[2]).resolve()
 artwork = Path(sys.argv[3]).resolve() if len(sys.argv) > 3 else Path(__file__).resolve().parent.parent / "Assets/Installer"
+architecture = subprocess.check_output(["lipo", "-archs", str(source / "Contents/MacOS/TrumpSwitcher")], text=True).strip()
+expected_volume = "Trump Switcher Intel" if architecture == "x86_64" else "Trump Switcher"
 shortcut_name = "Настройки безопасности.url"
 expected_positions = {"Trump Switcher.app": (185, 205), "Программы": (575, 205),
                       shortcut_name: (600, 408)}
@@ -55,6 +57,13 @@ with tempfile.TemporaryDirectory(prefix="trumpswitcher-image-check-") as tempora
             assert icons["arrangeBy"] == "none"
             alias = Alias.from_bytes(icons["backgroundImageAlias"])
             assert alias.target.filename == ".background.tiff", alias.target.filename
+            assert alias.volume.name == expected_volume, alias.volume.name
+            assert alias.volume.posix_path == "/Volumes/" + expected_volume, alias.volume.posix_path
+            bookmark = store["."]["pBBk"].tocs[0][1]
+            assert bookmark[0x2010] == expected_volume, bookmark.get(0x2010)
+            assert bookmark[0x2002] == "/Volumes/" + expected_volume, (
+                "Background bookmark refers to a differently mounted volume; eject other installers before packaging",
+                bookmark.get(0x2002))
         assert digest(mount / ".background.tiff") == digest(artwork / "background.tiff")
         assert (mount / ".Установка.txt").is_file()
         shortcut = mount / shortcut_name

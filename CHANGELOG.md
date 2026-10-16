@@ -2,6 +2,7 @@
 
 ## 0.6.34 · сборка для Intel · 2026-10-16
 
+- Установщик Intel `setup5`: отдельное имя тома и корректная ссылка Finder на встроенный фон устраняют конфликт с образом Apple Silicon.
 - Добавлены отдельные DMG и ZIP для Mac с Intel (x86_64, macOS 13+); функциональный код и версия приложения не менялись.
 - Сборка и установщик прошли проверку архитектуры, подписи, ресурсов и контрольных сумм. Запуск на Intel Mac пока не проверен.
 
@@ -31,6 +32,7 @@
 
 ## 0.6.34 · Intel build · 2026-10-16
 
+- Intel installer `setup5` gives the image a distinct volume name and Finder background reference, avoiding a conflict with the Apple Silicon image.
 - Added separate DMG and ZIP downloads for Intel Macs (x86_64, macOS 13+), without changing the app's functionality or version.
 - Verified architecture, signature, resources and checksums. A launch on Intel hardware has not yet been tested.
 
