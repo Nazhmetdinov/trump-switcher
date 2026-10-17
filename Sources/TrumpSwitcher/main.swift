@@ -44,7 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         applyLayoutPreferences(preferences.settings)
         autoMonitor.settings = preferences.settings
         access.settings = preferences.settings
-        // The approved arrows fit a standard square menu-bar item.
+        // The A | Я mark fits a standard square menu-bar item.
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         updateIcon()
         status.button?.toolTip = "Trump Switcher · ⌃⌥Пробел"

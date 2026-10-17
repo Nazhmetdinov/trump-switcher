@@ -1,26 +1,13 @@
 import AppKit
 
-// Option 02: paired arrows, rendered as native paths at every backing scale.
+// A | Я: a compact, typography-inspired menu-bar mark drawn at every backing scale.
 let root = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
 let assets = root.appendingPathComponent("Assets", isDirectory: true)
-func drawArrow() {
-    let shaft = NSBezierPath()
-    shaft.lineWidth = 1.65
-    shaft.lineCapStyle = .round
-    shaft.move(to: NSPoint(x: 3.65, y: 11.25))
-    shaft.curve(to: NSPoint(x: 17.35, y: 14.65),
-                controlPoint1: NSPoint(x: 3.95, y: 18.1),
-                controlPoint2: NSPoint(x: 13.45, y: 19.25))
-    shaft.stroke()
-
-    let head = NSBezierPath()
-    head.lineWidth = 1.65
-    head.lineCapStyle = .round
-    head.lineJoinStyle = .round
-    head.move(to: NSPoint(x: 14.75, y: 15.05))
-    head.line(to: NSPoint(x: 17.35, y: 14.65))
-    head.line(to: NSPoint(x: 18.25, y: 17.15))
-    head.stroke()
+func stroke(_ path: NSBezierPath, width: CGFloat) {
+    path.lineWidth = width
+    path.lineCapStyle = .round
+    path.lineJoinStyle = .round
+    path.stroke()
 }
 func drawIcon(in rect: NSRect) {
     NSGraphicsContext.saveGraphicsState()
@@ -28,14 +15,35 @@ func drawIcon(in rect: NSRect) {
     t.translateX(by: rect.minX, yBy: rect.minY)
     t.scaleX(by: rect.width / 22, yBy: rect.height / 22)
     t.concat()
-    NSColor.black.setFill(); NSColor.black.setStroke()
-    drawArrow()
-    // Rotating the same path makes both curves and arrowheads exactly symmetric.
-    let opposite = NSAffineTransform()
-    opposite.translateX(by: 22, yBy: 22)
-    opposite.rotate(byDegrees: 180)
-    opposite.concat()
-    drawArrow()
+    NSColor.black.setStroke()
+
+    let latin = NSBezierPath()
+    latin.move(to: NSPoint(x: 1.8, y: 4.0))
+    latin.line(to: NSPoint(x: 5.85, y: 18.0))
+    latin.line(to: NSPoint(x: 9.35, y: 4.0))
+    latin.move(to: NSPoint(x: 3.35, y: 9.15))
+    latin.line(to: NSPoint(x: 8.0, y: 9.15))
+    stroke(latin, width: 1.65)
+
+    let separator = NSBezierPath()
+    separator.move(to: NSPoint(x: 11.25, y: 2.8))
+    separator.line(to: NSPoint(x: 11.25, y: 19.2))
+    stroke(separator, width: 0.95)
+
+    let cyrillic = NSBezierPath()
+    cyrillic.move(to: NSPoint(x: 19.9, y: 4.0))
+    cyrillic.line(to: NSPoint(x: 19.9, y: 18.0))
+    cyrillic.line(to: NSPoint(x: 16.35, y: 18.0))
+    cyrillic.curve(to: NSPoint(x: 13.35, y: 15.1),
+                   controlPoint1: NSPoint(x: 14.45, y: 18.0),
+                   controlPoint2: NSPoint(x: 13.35, y: 16.85))
+    cyrillic.curve(to: NSPoint(x: 16.35, y: 12.05),
+                   controlPoint1: NSPoint(x: 13.35, y: 13.35),
+                   controlPoint2: NSPoint(x: 14.45, y: 12.05))
+    cyrillic.line(to: NSPoint(x: 19.9, y: 12.05))
+    cyrillic.move(to: NSPoint(x: 16.35, y: 12.05))
+    cyrillic.line(to: NSPoint(x: 13.15, y: 4.0))
+    stroke(cyrillic, width: 1.65)
     NSGraphicsContext.restoreGraphicsState()
 }
 
@@ -94,7 +102,7 @@ let preview = bitmap(width: 640, height: 280) { rect in
             tinted.draw(in: itemRect)
         }
     }
-    let text = "Вариант 02 · симметричные стрелки · 22 pt · 1× / 2× / 3×"
+    let text = "Вариант 02 · A│Я · 22 pt · 1× / 2× / 3×"
     text.draw(at: NSPoint(x: 30, y: 35), withAttributes: [
         .font: NSFont.systemFont(ofSize: 15), .foregroundColor: NSColor.black])
 }

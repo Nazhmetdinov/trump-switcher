@@ -1,5 +1,10 @@
 # История изменений / Changelog
 
+## 0.6.35 · build 74 · 2026-10-17
+
+- Значок в строке меню заменён на изящный монохромный знак «A│Я» по варианту №2. Буквы и тонкий разделитель рисуются векторно для экранов 1×, 2× и 3×; иконка адаптируется к светлой и тёмной строке меню.
+- Алгоритм исправления раскладки и иконка приложения не менялись.
+
 ## 0.6.34 · сборка для Intel · 2026-10-16
 
 - Установщик Intel `setup5`: отдельное имя тома и корректная ссылка Finder на встроенный фон устраняют конфликт с образом Apple Silicon.
@@ -29,6 +34,11 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.35 · build 74 · 2026-10-17
+
+- Replaced the menu-bar icon with the refined monochrome A│Я mark from option 2. The letters and fine separator are rendered from vector paths at 1×, 2× and 3×; the template icon adapts to light and dark menu bars.
+- Text correction behavior and the app icon are unchanged.
 
 ## 0.6.34 · Intel build · 2026-10-16
 

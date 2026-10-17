@@ -9,8 +9,8 @@ ARGB and the larger/Retina representations as PNG into `TrumpAppIcon.icns`.
 This keeps small icons legible in macOS permission lists and avoids the colour
 noise macOS displays for PNG payloads under the legacy `icp4`/`icp5` tags.
 
-The menu-bar icon is a pair of perfectly mirrored arrows, drawn by
-`scripts/prepare-menu-icon.swift` at 22 pt for 1×, 2× and 3× screens.
+The menu-bar icon is a compact A | Я mark with a fine vertical separator,
+drawn by `scripts/prepare-menu-icon.swift` at 22 pt for 1×, 2× and 3× screens.
 
 The drag-to-Applications installer artwork is drawn by
 `scripts/prepare-installer-art.swift`; see `Assets/Installer/README.md`.

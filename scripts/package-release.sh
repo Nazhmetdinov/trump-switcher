@@ -22,8 +22,7 @@ test "$(lipo -archs "$APP/Contents/MacOS/TrumpSwitcher")" = "$TARGET_ARCH"
 APP_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 APP_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Contents/Info.plist")"
 RELEASE_NAME="TrumpSwitcher-${APP_VERSION}-build${APP_BUILD}-${RELEASE_ARCH}"
-INSTALLER_NAME="${RELEASE_NAME}-setup4"
-if [[ "$TARGET_ARCH" == x86_64 ]]; then INSTALLER_NAME="${RELEASE_NAME}-setup5"; fi
+INSTALLER_NAME="$RELEASE_NAME"
 mkdir -p Releases
 RELEASE_STAGE="$(mktemp -d "${TMPDIR:-/tmp}/trumpswitcher-release-XXXXXX")"
 trap 'rm -rf "$RELEASE_STAGE"' EXIT
@@ -85,6 +84,6 @@ if [[ "${TRUMP_DMG_ONLY:-0}" != 1 ]]; then
 fi
 (
     cd Releases
-    shasum -a 256 "$INSTALLER_NAME.dmg" "$RELEASE_NAME.zip" > "$INSTALLER_NAME.sha256"
+    shasum -a 256 "$INSTALLER_NAME.dmg" > "$INSTALLER_NAME.sha256"
 )
 printf 'Installer: %s/Releases/%s.dmg\n' "$PWD" "$INSTALLER_NAME"
