@@ -21,6 +21,9 @@ codesign --verify --strict "$APP"
 test "$(lipo -archs "$APP/Contents/MacOS/TrumpSwitcher")" = "$TARGET_ARCH"
 APP_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Contents/Info.plist")"
 APP_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Contents/Info.plist")"
+# Finder records the background against the mounted volume path. Give each
+# release its own name so an older mounted installer cannot redirect that path.
+VOLUME_NAME="$VOLUME_NAME $APP_VERSION"
 RELEASE_NAME="TrumpSwitcher-${APP_VERSION}-build${APP_BUILD}-${RELEASE_ARCH}"
 INSTALLER_NAME="$RELEASE_NAME"
 mkdir -p Releases

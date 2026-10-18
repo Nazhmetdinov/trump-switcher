@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import plistlib
 import subprocess
 import sys
 import tempfile
@@ -16,7 +17,8 @@ image = Path(sys.argv[1]).resolve()
 source = Path(sys.argv[2]).resolve()
 artwork = Path(sys.argv[3]).resolve() if len(sys.argv) > 3 else Path(__file__).resolve().parent.parent / "Assets/Installer"
 architecture = subprocess.check_output(["lipo", "-archs", str(source / "Contents/MacOS/TrumpSwitcher")], text=True).strip()
-expected_volume = "Trump Switcher Intel" if architecture == "x86_64" else "Trump Switcher"
+version = plistlib.loads((source / "Contents/Info.plist").read_bytes())["CFBundleShortVersionString"]
+expected_volume = ("Trump Switcher Intel" if architecture == "x86_64" else "Trump Switcher") + " " + version
 shortcut_name = "Настройки безопасности.url"
 expected_positions = {"Trump Switcher.app": (185, 205), "Программы": (575, 205),
                       shortcut_name: (600, 408)}
