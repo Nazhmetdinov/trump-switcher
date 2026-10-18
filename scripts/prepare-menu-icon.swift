@@ -20,16 +20,24 @@ func drawIcon(in rect: NSRect) {
     // The menu-bar canvas stays 22 pt, while the ink occupies a centered,
     // shorter mark. Transform points instead of the graphics context so the
     // hairlines retain their intended weight at 1x and Retina resolutions.
-    func point(_ x: CGFloat, _ y: CGFloat) -> NSPoint {
-        NSPoint(x: 11 + (x - 11) * 0.78, y: 11 + (y - 11) * 0.72)
+    func point(_ x: CGFloat, _ y: CGFloat, offsetX: CGFloat = 0) -> NSPoint {
+        NSPoint(x: 11 + (x - 11) * 0.78 + offsetX, y: 11 + (y - 11) * 0.72)
+    }
+    // Keep a visible gap on both sides of the divider, including the feet of
+    // the letters. Spacing is in points so it remains clear at every scale.
+    func left(_ x: CGFloat, _ y: CGFloat) -> NSPoint {
+        point(x, y, offsetX: -1.1)
+    }
+    func right(_ x: CGFloat, _ y: CGFloat) -> NSPoint {
+        point(x, y, offsetX: 1.1)
     }
 
     let latin = NSBezierPath()
-    latin.move(to: point(1.8, 4.0))
-    latin.line(to: point(5.85, 18.0))
-    latin.line(to: point(9.35, 4.0))
-    latin.move(to: point(3.35, 9.15))
-    latin.line(to: point(8.0, 9.15))
+    latin.move(to: left(1.8, 4.0))
+    latin.line(to: left(5.85, 18.0))
+    latin.line(to: left(9.35, 4.0))
+    latin.move(to: left(3.35, 9.15))
+    latin.line(to: left(8.0, 9.15))
     stroke(latin, width: 1.45)
 
     let separator = NSBezierPath()
@@ -38,18 +46,18 @@ func drawIcon(in rect: NSRect) {
     stroke(separator, width: 0.85)
 
     let cyrillic = NSBezierPath()
-    cyrillic.move(to: point(19.9, 4.0))
-    cyrillic.line(to: point(19.9, 18.0))
-    cyrillic.line(to: point(16.35, 18.0))
-    cyrillic.curve(to: point(13.35, 15.1),
-                   controlPoint1: point(14.45, 18.0),
-                   controlPoint2: point(13.35, 16.85))
-    cyrillic.curve(to: point(16.35, 12.05),
-                   controlPoint1: point(13.35, 13.35),
-                   controlPoint2: point(14.45, 12.05))
-    cyrillic.line(to: point(19.9, 12.05))
-    cyrillic.move(to: point(16.35, 12.05))
-    cyrillic.line(to: point(13.15, 4.0))
+    cyrillic.move(to: right(19.9, 4.0))
+    cyrillic.line(to: right(19.9, 18.0))
+    cyrillic.line(to: right(16.35, 18.0))
+    cyrillic.curve(to: right(13.35, 15.1),
+                   controlPoint1: right(14.45, 18.0),
+                   controlPoint2: right(13.35, 16.85))
+    cyrillic.curve(to: right(16.35, 12.05),
+                   controlPoint1: right(13.35, 13.35),
+                   controlPoint2: right(14.45, 12.05))
+    cyrillic.line(to: right(19.9, 12.05))
+    cyrillic.move(to: right(16.35, 12.05))
+    cyrillic.line(to: right(13.15, 4.0))
     stroke(cyrillic, width: 1.45)
     NSGraphicsContext.restoreGraphicsState()
 }
