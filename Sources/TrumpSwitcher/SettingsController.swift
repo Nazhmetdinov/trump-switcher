@@ -240,9 +240,9 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
         label("Заменять на", view, x: 421, y: 195, w: 375, h: 24, bold: true)
         field(sourceField, "Например: lkz", "Если я набрал", view, x: 22, y: 160, w: 375)
         field(targetField, "Например: для", "Заменять на", view, x: 421, y: 160, w: 375)
-        label("Язык после замены", view, y: 117, w: 175, h: 26)
+        label("Язык текста замены", view, y: 117, w: 175, h: 26)
         targetLayout.addItems(withTitles: ["Определять по тексту", "Русский", "Английский"])
-        targetLayout.setAccessibilityLabel("Язык после замены")
+        targetLayout.setAccessibilityLabel("Язык текста замены")
         targetLayout.frame = NSRect(x: 195, y: 117, width: 225, height: 28); view.addSubview(targetLayout)
         saveRuleButton.title = "Добавить замену"; saveRuleButton.bezelStyle = .rounded
         saveRuleButton.target = self; saveRuleButton.action = #selector(saveRule)
@@ -518,7 +518,7 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
             let hasEnglish = text.unicodeScalars.contains { (0x41...0x5A).contains($0.value) || (0x61...0x7A).contains($0.value) }
             guard hasRussian != hasEnglish else {
                 if let language = editingLanguage { russian = language; break }
-                error("В замене неясен язык. Выберите «Русский» или «Английский» в поле «Язык после замены»."); return
+                error("В замене неясен язык. Выберите «Русский» или «Английский» в поле «Язык текста замены»."); return
             }
             russian = hasRussian
         }

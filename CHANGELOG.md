@@ -1,5 +1,12 @@
 # История изменений / Changelog
 
+## 0.6.38 · build 77 · 2026-10-21
+
+- После автоматического исправления программа возвращает раскладку, которая была включена до этого слова. Возврат выполняется после доставки всей замены; уже набранные клавиши следующего слова остаются в очереди до возврата.
+- Если пользователь сам сменил раскладку или активное приложение, программа не перезаписывает этот выбор.
+- В настройках своих замен подпись «Язык текста замены» теперь описывает язык исправленного слова, а не раскладку, которая останется после него.
+- Проверены словари RU/EN и физические соответствия поддерживаемых раскладок. Неоднозначные написания по-прежнему сохраняются, чтобы не портить правильно введённый текст.
+
 ## 0.6.37 · build 76 · 2026-10-18
 
 - Увеличены просветы между буквами «A», «Я» и разделителем значка в строке меню. Высота знака сохранена, внешние поля остаются видимыми.
@@ -43,6 +50,13 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.38 · build 77 · 2026-10-21
+
+- Automatic corrections now return to the input source active before that word. The return waits for the entire replacement batch to reach the editor, while keys already typed for the next word remain queued.
+- A user-selected input source or another foreground app is never overridden.
+- Renamed the custom-rule language label so it describes the replacement text rather than the input source left selected afterward.
+- Audited the bundled RU/EN dictionaries and physical mappings for supported layouts. Ambiguous spellings remain unchanged to avoid corrupting correct text.
 
 ## 0.6.37 · build 76 · 2026-10-18
 

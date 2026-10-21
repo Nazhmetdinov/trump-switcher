@@ -246,7 +246,7 @@ enum ApplicationConfigurationChecks {
         let row = store.settings.rules.count - 1, id = store.settings.rules[row].id
         ruleTable.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
         expect(source.stringValue == "mytest" && target.stringValue == "привет", "selecting a rule populates its edit form")
-        let language = views.compactMap { $0 as? NSPopUpButton }.first { $0.accessibilityLabel() == "Язык после замены" }!
+        let language = views.compactMap { $0 as? NSPopUpButton }.first { $0.accessibilityLabel() == "Язык текста замены" }!
         language.selectItem(at: 2)
         target.stringValue = "hello"; send(button("saveRule"))
         expect(store.settings.rules.last?.id == id && store.settings.rules.last?.output == "hello" && store.settings.rules.last?.russian == false,

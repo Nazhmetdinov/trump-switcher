@@ -80,6 +80,29 @@ func inputSourceRollbackChecks() -> Int {
         expect(normalized(prior, 100) == String(word.first!), "refused rollback leaves previous immutable proof intact")
     }
 
+    // A successful automatic correction first selects the corrected word's
+    // layout. Its final keyUp must cross the destination before the old layout
+    // is selected; keys captured during that short interval can still carry
+    // the temporary layout's Unicode payload after the return.
+    var selected: String? = russian.id
+    let forward = QueuedLayoutTransition.committed(previous: english, target: russian,
+        boundary: 100, selectedAt: 101, preserving: nil)!
+    let oneWord = InputSourceRollback(previous: english, temporary: russian,
+        startedAt: 101, destinationPID: pid)!
+    let returned = oneWord.restore(preserving: forward, currentSource: { selected },
+        foregroundPID: { pid }, selectPrevious: { selected = english.id; return true },
+        restoredAt: { 150 })!
+    let englishKey = english.replacement("h")!
+    let staleRussian = russian.character(code: englishKey.code, shift: englishKey.shift,
+        capsLock: false, option: englishKey.option)!
+    expect(selected == english.id, "successful one-word correction returns to its prior input source")
+    expect(returned.normalized(staleRussian, code: englishKey.code, shift: englishKey.shift,
+        capsLock: false, option: englishKey.option, timestamp: 125,
+        currentID: selected, systemEvent: true) == "h", "queued next-word keys retain their intended layout")
+    expect(returned.normalized("h", code: englishKey.code, shift: englishKey.shift,
+        capsLock: false, option: englishKey.option, timestamp: 151,
+        currentID: selected, systemEvent: true) == nil, "keys after the return stay unchanged")
+
     var chain = QueuedLayoutTransition(previous: english, target: russian, boundary: 1, selectedAt: 2)
     for index in 1..<32 {
         var source: String? = english.id

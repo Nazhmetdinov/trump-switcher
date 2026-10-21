@@ -13,11 +13,11 @@ Trump Switcher corrects a word typed in the wrong keyboard layout. Type `ghbdtn`
 - **Your choice.** Optional launch at login, with no account, telemetry, cloud dictionary or auto-download.
 - **Inspectable.** Source code and dictionary provenance are public.
 
-Correction normally runs after Space; Enter and Tab are configurable boundaries. Unambiguous punctuation can trigger it immediately. Examples: `lkz` → `для`, `b` → `и`, `ghbdtn!` → `привет!`.
+Correction normally runs after Space; Enter and Tab are configurable boundaries. After correcting a word, the app returns to the input source that was active before it. Unambiguous punctuation can trigger correction immediately. Examples: `lkz` → `для`, `b` → `и`, `ghbdtn!` → `привет!`.
 
 ## Install
 
-1. Download the DMG for your Mac: [Apple Silicon (M1 or newer)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.37/TrumpSwitcher-0.6.37-build76-AppleSilicon.dmg) or [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.37/TrumpSwitcher-0.6.37-build76-Intel.dmg). Requires **macOS 13+**.
+1. Download the DMG for your Mac: [Apple Silicon (M1 or newer)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.38/TrumpSwitcher-0.6.38-build77-AppleSilicon.dmg) or [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.38/TrumpSwitcher-0.6.38-build77-Intel.dmg). Requires **macOS 13+**.
 2. Open the image and drag **Trump Switcher** onto **Applications**.
 3. Start it from Applications and grant **Accessibility** permission when macOS asks. This permits the app to inspect the current word and type its correction.
 4. Open settings from the menu bar icon; launch at login is optional.
