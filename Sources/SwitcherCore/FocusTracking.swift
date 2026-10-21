@@ -2,6 +2,16 @@ import Foundation
 
 public enum FocusTracking {
     private static let textRoles: Set<String> = ["AXTextField", "AXTextArea", "AXSecureTextField"]
+    /// Some editors reuse one AX object for different controls. A changed
+    /// stable identifier is a field change even when CFEqual still succeeds.
+    /// Geometry may change while typing, so it is not a stable identity here.
+    public static func changed(previousIdentity: String?, nextIdentity: String?,
+                               previousRole: String?, nextRole: String?, sameElement: Bool) -> Bool {
+        guard sameElement else { return true }
+        guard let previousIdentity, let nextIdentity,
+              previousIdentity.contains("/id/"), nextIdentity.contains("/id/") else { return false }
+        return previousIdentity != nextIdentity || previousRole != nextRole
+    }
     public static func sameIdentifiedField(previousIdentity: String?, nextIdentity: String?,
                                            previousRole: String?, nextRole: String?) -> Bool {
         guard let previousIdentity, previousIdentity.contains("/id/") else { return false }

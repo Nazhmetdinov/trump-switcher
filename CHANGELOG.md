@@ -1,5 +1,11 @@
 # История изменений / Changelog
 
+## 0.6.41 · build 80 · 2026-10-21
+
+- При смене поля редактора с тем же Accessibility-объектом приложение теперь учитывает устойчивый идентификатор поля. Начало слова из прежнего поля не переносится в новое.
+- После подтверждённой смены поля первое слово обрабатывается сразу. При пересоздании объекта того же поля с совпадающей геометрией сохранённая часть слова используется только после проверки полного текста перед заменой.
+- Пройдены 77 996 офлайн-проверок, включая 240 воспроизводимых последовательностей ввода. Сборки Apple Silicon и Intel и оба установочных образа проверены без установки на Mac; поведение на реальном Intel Mac и в сторонних редакторах этим выпуском отдельно не подтверждалось.
+
 ## 0.6.40 · build 79 · 2026-10-21
 
 - Исправлена отмена ожидающей замены, когда редактор пересоздаёт Accessibility-объект того же поля с устойчивым идентификатором. Переход в другое поле по-прежнему отменяет замену; совпадение одной геометрии не считается доказательством того же поля.
@@ -62,6 +68,12 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.41 · build 80 · 2026-10-21
+
+- A reused Accessibility object with a different stable field identifier now starts a new token, so a prefix from the previous editor cannot be carried into the next one.
+- The first word in a newly confirmed field is eligible for correction immediately. When only geometry matches after wrapper recreation, a retained prefix still requires exact whole-word verification before replacement.
+- Passed 77,996 offline checks, including 240 reproducible input sequences. Apple Silicon and Intel builds and both disk images were verified without installation; this release does not claim runtime validation on Intel hardware or in third-party editors.
 
 ## 0.6.40 · build 79 · 2026-10-21
 

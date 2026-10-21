@@ -1579,7 +1579,9 @@ final class AutoMonitor {
         var allowed = permitted
         if let next = snapshot.element {
             let hadFocus = focused != nil
-            let changed = focused.map { !CFEqual($0, next) } ?? true
+            let changed = focused.map { FocusTracking.changed(
+                previousIdentity: focusedIdentity, nextIdentity: snapshot.identity,
+                previousRole: focusedRole, nextRole: snapshot.role, sameElement: CFEqual($0, next)) } ?? true
             // Punctuation continuation belongs to one exact focus, even when
             // two opaque editors expose the same role/geometry in one process.
             if changed { periodContinuation = nil }
@@ -1601,6 +1603,10 @@ final class AutoMonitor {
             if actualFieldChanged {
                 recentSelectionProgress = nil
                 if hasPendingInput { cancel() }
+                // Equal geometry may be wrapper churn in the same editor;
+                // retain that prefix only for exact whole-word verification.
+                // A distinct identity starts a fresh word on the first key.
+                if !sameField { buffer.reset() }
             }
             // Mouse/Tab/app changes already reset the stream. Transient AXWindow/
             // AXGroup wrappers are not a new text field on every typing hint.
