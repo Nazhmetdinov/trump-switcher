@@ -17,7 +17,7 @@ Trump Switcher исправляет слово, случайно набранн�
 
 ## Установка
 
-1. Скачайте DMG для своего Mac: [Apple Silicon (M1 и новее)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.38/TrumpSwitcher-0.6.38-build77-AppleSilicon.dmg) или [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.38/TrumpSwitcher-0.6.38-build77-Intel.dmg). Нужна **macOS 13+**.
+1. Скачайте DMG для своего Mac: [Apple Silicon (M1 и новее)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.39/TrumpSwitcher-0.6.39-build78-AppleSilicon.dmg) или [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.39/TrumpSwitcher-0.6.39-build78-Intel.dmg). Нужна **macOS 13+**.
 2. Откройте образ и перетащите **Trump Switcher** в папку **«Программы»**.
 3. Запустите приложение из «Программ» и предоставьте доступ **«Универсальный доступ»** (Accessibility), когда macOS попросит. Он нужен для чтения текущего слова и отправки исправленного текста.
 4. Откройте настройки через значок в строке меню. Там можно включить запуск вместе с Mac.

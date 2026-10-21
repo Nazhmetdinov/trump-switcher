@@ -1,5 +1,11 @@
 # История изменений / Changelog
 
+## 0.6.39 · build 78 · 2026-10-21
+
+- Добавлены 33 русские и 17 английских написаний, отсутствовавших в упакованных словарях: современные термины и их конкретные формы. Существующие частотные словари и лицензии не менялись.
+- При совпадении символа на разных физических клавишах RussianWin преобразование теперь выбирает обычную ANSI-позицию. Это исправляет обратное сопоставление «ё» с клавишей ` вместо служебной ISO-клавиши.
+- Проверены все печатные позиции пяти поддерживаемых раскладок с сочетаниями Shift, Caps Lock и Option; расширенный офлайн-прогон слов и оформления прошёл без ошибок. Неоднозначные варианты по-прежнему не заменяются автоматически.
+
 ## 0.6.38 · build 77 · 2026-10-21
 
 - После автоматического исправления программа возвращает раскладку, которая была включена до этого слова. Возврат выполняется после доставки всей замены; уже набранные клавиши следующего слова остаются в очереди до возврата.
@@ -50,6 +56,12 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.39 · build 78 · 2026-10-21
+
+- Added 33 Russian and 17 English exact spellings missing from the bundled dictionaries, including current technical terms and selected inflections. Existing frequency packs and licenses are unchanged.
+- When RussianWin exposes the same glyph on different physical keys, conversion now prefers the ordinary ANSI position. This fixes the mapping of ё to the grave key instead of the ISO section key.
+- Checked all printable positions of the five supported layouts with Shift, Caps Lock and Option combinations. The expanded offline word and punctuation matrix passed; ambiguous spellings are still left unchanged.
 
 ## 0.6.38 · build 77 · 2026-10-21
 

@@ -17,7 +17,7 @@ Correction normally runs after Space; Enter and Tab are configurable boundaries.
 
 ## Install
 
-1. Download the DMG for your Mac: [Apple Silicon (M1 or newer)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.38/TrumpSwitcher-0.6.38-build77-AppleSilicon.dmg) or [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.38/TrumpSwitcher-0.6.38-build77-Intel.dmg). Requires **macOS 13+**.
+1. Download the DMG for your Mac: [Apple Silicon (M1 or newer)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.39/TrumpSwitcher-0.6.39-build78-AppleSilicon.dmg) or [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.39/TrumpSwitcher-0.6.39-build78-Intel.dmg). Requires **macOS 13+**.
 2. Open the image and drag **Trump Switcher** onto **Applications**.
 3. Start it from Applications and grant **Accessibility** permission when macOS asks. This permits the app to inspect the current word and type its correction.
 4. Open settings from the menu bar icon; launch at login is optional.

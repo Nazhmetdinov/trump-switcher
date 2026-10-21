@@ -27,9 +27,13 @@ public struct KeyboardLayoutTable {
         var characters: [PhysicalKey: String] = [:]
         var inverse: [String: PhysicalKey] = [:]
         var typingInverse: [String: PhysicalKey] = [:]
-        // ANSI, ISO and JIS printable positions. Navigation/function keys and
-        // control output are deliberately omitted; no dead-key composition.
-        for code: UInt16 in Array(0...50) + [93, 94, 95, 102] {
+        // Prefer ordinary ANSI positions when several physical keys produce
+        // the same glyph. For example RussianWin maps ё from key 10 (ISO §)
+        // and key 50 (ANSI grave); choosing key 10 would convert ё to § on
+        // ABC instead of the expected ` on a standard ANSI keyboard. Still
+        // retain ISO/JIS positions for keyboards that actually use them.
+        // Navigation/function keys and dead-key composition are omitted.
+        for code: UInt16 in Array(0...9) + Array(11...50) + [10, 93, 94, 95, 102] {
             for modifiers: UInt32 in [0, 2, 4, 6, 8, 10, 12, 14] {
                 let shifted = modifiers & 2 != 0
                 let option = modifiers & 8 != 0

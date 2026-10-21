@@ -100,7 +100,8 @@ public final class LocalDictionary {
         guard (1...48).contains(word.count), word.allSatisfy({ $0.isLetter || $0 == "'" || $0 == "’" }) else { return false }
         let normalized = word.precomposedStringWithCanonicalMapping.lowercased().replacingOccurrences(of: "’", with: "'")
         let frequency = layout == .russian ? russianFrequency : englishFrequency
-        if frequency.contains(normalized) || CommonNames.recognizes(normalized, layout) { return true }
+        if frequency.contains(normalized) || CommonNames.recognizes(normalized, layout) ||
+            SupplementalWords.recognizes(normalized, layout) { return true }
         // Do not capitalize every candidate to make Hunspell accept it: this
         // licenses acronyms such as ФФПР as lowercase gibberish and suppresses
         // real English words. Product/person names have an explicit lexicon.
