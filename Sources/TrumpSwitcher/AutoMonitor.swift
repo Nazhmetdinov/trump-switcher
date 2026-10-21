@@ -1584,11 +1584,20 @@ final class AutoMonitor {
             // two opaque editors expose the same role/geometry in one process.
             if changed { periodContinuation = nil }
             let sameField = snapshot.identity != nil && snapshot.identity == focusedIdentity && snapshot.role == focusedRole
-            // Equal geometry/identifiers do not give a pending mutation ownership
-            // of a different AX text field. Cancel before accepting that field.
-            let textRoles = [kAXTextAreaRole, kAXTextFieldRole]
-            let actualFieldChanged = hadFocus && changed &&
-                textRoles.contains(focusedRole ?? "") && textRoles.contains(snapshot.role ?? "")
+            // Geometry alone can identify two different editors at the same
+            // position. Retain a held word across wrapper churn only when the
+            // editor exposes the same stable AX identifier. The write edge
+            // still verifies exact field and text ownership.
+            let sameIdentifiedField = FocusTracking.sameIdentifiedField(
+                previousIdentity: focusedIdentity, nextIdentity: snapshot.identity,
+                previousRole: focusedRole, nextRole: snapshot.role)
+            if FocusTracking.needsWholeWordProof(identityChanged: changed, sameLogicalField: sameField,
+                sameIdentifiedField: sameIdentifiedField, previousRole: focusedRole, nextRole: snapshot.role) {
+                buffer.requireVerifiedText()
+            }
+            let actualFieldChanged = hadFocus && FocusTracking.shouldCancelPending(
+                previousRole: focusedRole, nextRole: snapshot.role,
+                identityChanged: changed, sameLogicalField: sameIdentifiedField)
             if actualFieldChanged {
                 recentSelectionProgress = nil
                 if hasPendingInput { cancel() }

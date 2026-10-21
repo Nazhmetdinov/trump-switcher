@@ -20,7 +20,7 @@ info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
 assert info["CFBundleIdentifier"] == "local.trumpswitcher.mac"
 assert info["CFBundleExecutable"] == "TrumpSwitcher"
 assert info["LSMinimumSystemVersion"] == "13.0"
-assert info["CFBundleShortVersionString"] == "0.6.39" and info["CFBundleVersion"] == "78"
+assert info["CFBundleShortVersionString"] == "0.6.40" and info["CFBundleVersion"] == "79"
 binary = app / "Contents/MacOS/TrumpSwitcher"
 assert sorted(p.name for p in binary.parent.iterdir()) == ["TrumpSwitcher"]
 subprocess.run(["/usr/bin/codesign", "--verify", "--strict", str(app)], check=True)

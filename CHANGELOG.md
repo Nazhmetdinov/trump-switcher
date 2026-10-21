@@ -1,5 +1,11 @@
 # История изменений / Changelog
 
+## 0.6.40 · build 79 · 2026-10-21
+
+- Исправлена отмена ожидающей замены, когда редактор пересоздаёт Accessibility-объект того же поля с устойчивым идентификатором. Переход в другое поле по-прежнему отменяет замену; совпадение одной геометрии не считается доказательством того же поля.
+- Если пересозданные поля совпали только по координатам, программа сохраняет набранные символы, но перед заменой требует подтверждения целого слова в текущем поле. Это исключает удаление части слова из другого поля при быстром переключении.
+- Сохранены точная проверка поля и текста непосредственно перед отправкой клавиш, порядок их доставки и возврат прежней раскладки после исправления.
+
 ## 0.6.39 · build 78 · 2026-10-21
 
 - Добавлены 33 русские и 17 английских написаний, отсутствовавших в упакованных словарях: современные термины и их конкретные формы. Существующие частотные словари и лицензии не менялись.
@@ -56,6 +62,12 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.40 · build 79 · 2026-10-21
+
+- Fixed cancellation of a pending correction when an editor recreates the Accessibility object for the same field with a stable identifier. A switch to another field still cancels the correction; matching geometry alone is not treated as proof of the same field.
+- When recreated fields match only by geometry, typed characters are retained but a correction requires verification of the complete word in the current field. This prevents deleting part of a word in another field after a fast focus switch.
+- Exact field/text verification before posting keys, ordered delivery, and return to the previous input source remain in place.
 
 ## 0.6.39 · build 78 · 2026-10-21
 

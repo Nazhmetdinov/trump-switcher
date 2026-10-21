@@ -111,6 +111,36 @@ func reliabilityChecks(dictionary: LocalDictionary) -> Int {
     }
     expect(!FocusTracking.shouldReset(previousRole: "AXTextArea", nextRole: "AXTextArea", identityChanged: true, alreadyReset: false, sameLogicalField: true), "rebuilt web composer does not cut a word")
     expect(FocusTracking.shouldReset(previousRole: "AXTextArea", nextRole: "AXTextArea", identityChanged: true, alreadyReset: false, sameLogicalField: false), "different composer still invalidates a word")
+    expect(!FocusTracking.shouldCancelPending(previousRole: "AXTextArea", nextRole: "AXTextArea", identityChanged: true,
+        sameLogicalField: true), "rebuilt AX wrapper cannot cancel a held word in the same composer")
+    expect(FocusTracking.shouldCancelPending(previousRole: "AXTextArea", nextRole: "AXTextArea", identityChanged: true,
+        sameLogicalField: false), "different editor cancels a held word")
+    expect(!FocusTracking.shouldCancelPending(previousRole: "AXTextArea", nextRole: "AXTextArea", identityChanged: false,
+        sameLogicalField: false), "unchanged editor retains a held word")
+    expect(FocusTracking.sameIdentifiedField(previousIdentity: "AXTextArea/id/composer", nextIdentity: "AXTextArea/id/composer",
+        previousRole: "AXTextArea", nextRole: "AXTextArea"), "same stable editor identifier survives AX wrapper churn")
+    expect(!FocusTracking.sameIdentifiedField(previousIdentity: "AXTextArea/rect/10/20/300", nextIdentity: "AXTextArea/rect/10/20/300",
+        previousRole: "AXTextArea", nextRole: "AXTextArea"), "coincident editor geometry cannot retain a pending mutation")
+    expect(!FocusTracking.sameIdentifiedField(previousIdentity: "AXTextArea/id/first", nextIdentity: "AXTextArea/id/second",
+        previousRole: "AXTextArea", nextRole: "AXTextArea"), "different identified editor cancels a held word")
+    expect(FocusTracking.needsWholeWordProof(identityChanged: true, sameLogicalField: true,
+        sameIdentifiedField: false, previousRole: "AXTextArea", nextRole: "AXTextArea"),
+        "equal editor geometry requires a complete-word check")
+    expect(!FocusTracking.needsWholeWordProof(identityChanged: true, sameLogicalField: true,
+        sameIdentifiedField: true, previousRole: "AXTextArea", nextRole: "AXTextArea"),
+        "stable editor identifier does not require another word check")
+    expect(!FocusTracking.needsWholeWordProof(identityChanged: false, sameLogicalField: true,
+        sameIdentifiedField: false, previousRole: "AXTextArea", nextRole: "AXTextArea"),
+        "unchanged AX wrapper does not require another word check")
+    var geometryToken = TypingBuffer()
+    geometryToken.append("r")
+    if FocusTracking.needsWholeWordProof(identityChanged: true, sameLogicalField: true,
+        sameIdentifiedField: false, previousRole: "AXTextArea", nextRole: "AXTextArea") {
+        geometryToken.requireVerifiedText()
+    }
+    geometryToken.append("n")
+    expect(geometryToken.token == "rn" && geometryToken.requiresVerifiedText,
+        "ambiguous geometry retains input but cannot authorize an unverified replacement")
     for _ in 0..<50 {
         permission.resolve(true); permission.exclude() // Settings/Secure Input
         permission.begin() // back to the SAME PID or Tab to another field
