@@ -20,7 +20,8 @@ info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
 assert info["CFBundleIdentifier"] == "local.trumpswitcher.mac"
 assert info["CFBundleExecutable"] == "TrumpSwitcher"
 assert info["LSMinimumSystemVersion"] == "13.0"
-assert info["CFBundleShortVersionString"] == "0.6.41" and info["CFBundleVersion"] == "80"
+assert info["LSUIElement"] is True, "The app must run from the menu bar without a Dock icon"
+assert info["CFBundleShortVersionString"] == "0.6.42" and info["CFBundleVersion"] == "81"
 binary = app / "Contents/MacOS/TrumpSwitcher"
 assert sorted(p.name for p in binary.parent.iterdir()) == ["TrumpSwitcher"]
 subprocess.run(["/usr/bin/codesign", "--verify", "--strict", str(app)], check=True)

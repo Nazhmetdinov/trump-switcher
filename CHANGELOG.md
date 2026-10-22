@@ -1,5 +1,10 @@
 # История изменений / Changelog
 
+## 0.6.42 · build 81 · 2026-10-22
+
+- Trump Switcher работает как приложение строки меню: без значка в Dock и без автоматического открытия настроек при запуске. Настройки и справка открываются по команде в меню значка.
+- Приложение продолжает работать после закрытия окна настроек. Сборки Apple Silicon и Intel проверены локально без установки на Mac.
+
 ## 0.6.41 · build 80 · 2026-10-21
 
 - При смене поля редактора с тем же Accessibility-объектом приложение теперь учитывает устойчивый идентификатор поля. Начало слова из прежнего поля не переносится в новое.
@@ -68,6 +73,11 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.42 · build 81 · 2026-10-22
+
+- Trump Switcher runs as a menu-bar app: no Dock icon and no settings window opened automatically at launch. Settings and help remain available from the menu-bar icon.
+- Closing the settings window leaves the app running. Apple Silicon and Intel packages were checked locally without installation.
 
 ## 0.6.41 · build 80 · 2026-10-21
 

@@ -1,5 +1,4 @@
 import AppKit
-import Carbon
 import ServiceManagement
 
 enum LaunchAtLoginState: Equatable {
@@ -7,12 +6,6 @@ enum LaunchAtLoginState: Equatable {
 }
 
 enum LaunchAtLogin {
-    static func shouldShowSettings(arguments: [String], event: NSAppleEventDescriptor?) -> Bool {
-        if arguments.contains("--background") { return false }
-        return event?.paramDescriptor(forKeyword: keyAELaunchedAsLogInItem) == nil
-            && event?.paramDescriptor(forKeyword: keyAELaunchedAsServiceItem) == nil
-    }
-
     static func state() -> LaunchAtLoginState {
         state(for: SMAppService.mainApp.status)
     }

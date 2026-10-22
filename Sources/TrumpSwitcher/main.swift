@@ -38,7 +38,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular)
+        NSApp.setActivationPolicy(.accessory)
         installApplicationMenu()
         autoEnabled = preferences.settings.automatic
         applyLayoutPreferences(preferences.settings)
@@ -103,10 +103,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard let self else { return }
             let trusted = AXIsProcessTrusted()
             if trusted != self.wasTrusted || (trusted && self.autoEnabled && !self.paused && !self.autoMonitor.running) { self.wasTrusted = trusted; self.refreshAuto() }
-        }
-        if LaunchAtLogin.shouldShowSettings(arguments: CommandLine.arguments,
-                                           event: NSAppleEventManager.shared().currentAppleEvent) {
-            showSettings()
         }
     }
 

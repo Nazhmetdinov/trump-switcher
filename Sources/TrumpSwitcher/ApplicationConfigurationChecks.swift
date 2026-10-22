@@ -1,5 +1,4 @@
 import AppKit
-import Carbon
 import Darwin
 import SwitcherCore
 
@@ -155,15 +154,6 @@ enum ApplicationConfigurationChecks {
         expect(LaunchAtLogin.state(for: .notRegistered) == .off, "unregistered login item is off")
         expect(LaunchAtLogin.state(for: .enabled) == .on, "only enabled login service is on")
         expect(LaunchAtLogin.state(for: .requiresApproval) == .needsApproval, "pending system approval is distinct from enabled")
-        expect(LaunchAtLogin.shouldShowSettings(arguments: ["TrumpSwitcher"], event: nil), "ordinary launch opens settings")
-        expect(!LaunchAtLogin.shouldShowSettings(arguments: ["TrumpSwitcher", "--background"], event: nil), "background launch leaves windows closed")
-        for keyword in [keyAELaunchedAsLogInItem, keyAELaunchedAsServiceItem] {
-            let event = NSAppleEventDescriptor(eventClass: kCoreEventClass, eventID: kAEOpenApplication,
-                                               targetDescriptor: nil, returnID: AEReturnID(kAutoGenerateReturnID),
-                                               transactionID: AETransactionID(kAnyTransactionID))
-            event.setParam(NSAppleEventDescriptor(boolean: true), forKeyword: keyword)
-            expect(!LaunchAtLogin.shouldShowSettings(arguments: ["TrumpSwitcher"], event: event), "system login launch leaves windows closed")
-        }
         var failSave = false, permissionRequests = 0, resumes = 0
         var loginEnabled = false, loginChanges = 0, failLogin = false, loginSettingsOpened = 0
         var state: SettingsState = .ready
