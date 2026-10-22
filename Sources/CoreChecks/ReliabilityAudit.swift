@@ -13,8 +13,14 @@ func runReliabilityAudit() throws {
             layout == .russian ? en.convert(text, to: ru) : ru.convert(text, to: en)
         }
         for (language, target) in [("ru", Layout.russian), ("en", .english)] {
-            let words = try String(contentsOf: directory.appendingPathComponent(language + "_frequency.txt"), encoding: .utf8)
+            let sourceWords = try String(contentsOf: directory.appendingPathComponent(language + "_frequency.txt"), encoding: .utf8)
                 .split(separator: "\n").map(String.init)
+            // The frequency packs are observational corpora, not proof that
+            // every token is a word. Audit only entries the current recognizer
+            // accepts; report excluded source noise rather than counting it as
+            // a valid spelling changed by the correction engine.
+            let words = sourceWords.filter { dictionary.recognizes($0, target) }
+            let rejectedSourceEntries = sourceWords.count - words.count
             var exact = 0, preserved = 0, collision = 0, missed = 0, incorrect = 0, changedValid = 0
             var samples: [String: [String]] = [:]
             func sample(_ key: String, _ value: String) { if samples[key, default: []].count < 30 { samples[key, default: []].append(value) } }
@@ -32,6 +38,7 @@ func runReliabilityAudit() throws {
                 }
             }
             let row: [String: Any] = ["layout": id, "language": language, "words": words.count,
+                "rejectedSourceEntries": rejectedSourceEntries,
                 "exact": exact, "samePhysicalSpelling": preserved, "sourceWordCollision": collision,
                 "missedOrAmbiguous": missed, "incorrect": incorrect, "changedValid": changedValid,
                 "seconds": ProcessInfo.processInfo.systemUptime - started, "samples": samples]

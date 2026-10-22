@@ -1,5 +1,11 @@
 # История изменений / Changelog
 
+## 0.6.43 · build 82 · 2026-10-22
+
+- Удалена ложная русская запись из решений распознавания: набранное в русской раскладке `сфе` теперь исправляется в `cat`, а не блокируется как якобы правильное русское слово. Исходные частотные файлы и их лицензии сохранены.
+- Добавлены проверенные современные написания и формы на русском и английском, включая короткие слова, которые не мог принять дополнительный морфологический словарь. Для неоднозначных сочетаний по-прежнему безопаснее оставить набранный текст, чем заменять часть слова.
+- Проверены полные частотные списки и реальные таблицы поддерживаемых раскладок: неверных исправлений и изменений корректных слов в аудите нет. Гарвардский General Inquirer изучен, но не включён: это словарь смысловых категорий для анализа текста, а не источник проверки написания; его самостоятельное распространение также ограничено правообладателем.
+
 ## 0.6.42 · build 81 · 2026-10-22
 
 - Trump Switcher работает как приложение строки меню: без значка в Dock и без автоматического открытия настроек при запуске. Настройки и справка открываются по команде в меню значка.
@@ -73,6 +79,12 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.43 · build 82 · 2026-10-22
+
+- Excluded a false Russian frequency entry from recognition, allowing `сфе` typed on a Russian layout to become `cat` without changing the upstream frequency files or their licenses.
+- Added verified contemporary Russian and English spellings and inflections, including short words that the supplemental morphology source cannot safely admit wholesale. Ambiguous input still stays unchanged rather than producing a fragment.
+- Audited the complete frequency lists against the supported physical layouts: no incorrect corrections or changes to accepted source words. Harvard's General Inquirer was reviewed but not bundled: its semantic categories are not a spelling lexicon, and independent redistribution is restricted.
 
 ## 0.6.42 · build 81 · 2026-10-22
 

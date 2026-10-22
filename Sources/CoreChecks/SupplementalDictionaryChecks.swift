@@ -13,13 +13,21 @@ func supplementalVocabularyChecks(dictionary: LocalDictionary) -> Int {
         "телеграмов", "суперапп", "супераппа", "супераппы", "супераппов",
         "нейроагент", "нейроагента", "нейроагенты", "нейроагентов",
         "мультиагент", "мультиагента", "мультиагенты",
-        "скроллит", "скроллил", "скроллила", "скроллили", "заскринить"
+        "скроллит", "скроллил", "скроллила", "скроллили", "заскринить",
+        "мем", "мемы", "рилс", "чаты", "фича", "фичи", "айти", "пуш", "пуши", "пушей", "скам",
+        "пин", "пины", "репо", "сорс", "фейк", "трея", "трее",
+        "пулреквест", "пулреквеста", "пулреквесты", "офлайн", "свайп", "свайпнуть",
+        "нейроагентами", "нейронками", "промптингу", "нейросетевым",
+        "лайк", "апдейт", "фичам",
+        "инстаграм", "инстаграма", "инстаграму", "инстаграмом", "инстаграме"
     ]
     let englishWords = [
         "autocorrection", "autocorrections", "autocompletions",
         "sidepanel", "sidepanels", "worktree", "worktrees",
         "agentic", "codegen", "codemod", "codemods", "devtools",
-        "cloudflare", "vercel", "dockerize", "dockerized", "dockerizing"
+        "cloudflare", "vercel", "dockerize", "dockerized", "dockerizing",
+        "api", "llm", "llms", "dockerfile", "webkit", "tokenizer", "tokenization",
+        "signup", "passcode", "webapp", "bugfix", "devops", "dataclass", "langchain", "patchset"
     ]
     var checks = 0
     func expect(_ condition: @autoclosure () -> Bool, _ description: String) {
@@ -44,6 +52,27 @@ func supplementalVocabularyChecks(dictionary: LocalDictionary) -> Int {
         func detected(_ token: String) -> String? {
             AutoCorrection.detect(token, recognizes: dictionary.recognizes,
                 recognizesFragment: dictionary.recognizesCommon, convert: convert)?.text
+        }
+        expect(!dictionary.recognizes("сфе", .russian), "invalid subtitle-frequency token cannot shadow English cat")
+        expect(detected(abc.convert("cat", to: russian)) == "cat", "cat typed in Russian layout converts to English")
+        expect(detected(abc.convert("hi", to: russian)) == "hi", "short English greeting converts safely")
+        expect(detected("кот") == nil, "valid Russian word remains untouched")
+        expect(dictionary.recognizes("мерж", .russian), "modern word with punctuation-key letter is recognized")
+        let ambiguousMerge = russian.convert("мерж", to: abc)
+        let mergeResult = detected(ambiguousMerge)
+        expect(mergeResult == nil || mergeResult == "мерж", "ambiguous semicolon does not invent a merge fragment")
+        let ambiguousVibe = russian.convert("вайбкодинг", to: abc)
+        let vibeResult = detected(ambiguousVibe)
+        expect(vibeResult == nil || vibeResult == "вайбкодинг", "ambiguous comma does not split vibe coding")
+        for word in ["фидбек", "фидбека", "фидбеком", "кэширование", "кэширования", "вебкамера", "лайфхак", "лайфхаки"] {
+            expect(dictionary.recognizes(word, .russian), "recognizes punctuation-key word \(word)")
+            let mistyped = russian.convert(word, to: abc)
+            expect(detected(mistyped) == word, "corrects unambiguous punctuation-key word \(word)")
+        }
+        for word in ["баги", "вайб", "вайбкодинг"] {
+            expect(dictionary.recognizes(word, .russian), "recognizes punctuation-ambiguous word \(word)")
+            let result = detected(russian.convert(word, to: abc))
+            expect(result == nil || result == word, "never invents a fragment for punctuation-ambiguous \(word)")
         }
         for (words, target, correct, wrong) in [
             (russianWords, Layout.russian, russian, abc),

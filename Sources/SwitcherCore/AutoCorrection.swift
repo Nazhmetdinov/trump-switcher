@@ -20,7 +20,7 @@ public struct AutoCorrection {
     ]
     private static let shortEnglish: Set<String> = [
         "a", "i", "to", "of", "in", "is", "it", "he", "we", "be", "by", "at", "an", "as", "am",
-        "on", "or", "so", "if", "do", "no", "up", "us", "me", "my", "go", "oh", "ok"
+        "on", "or", "so", "if", "do", "no", "up", "us", "me", "my", "go", "oh", "ok", "hi"
     ]
     private static let opening = Set("([{'\"«“‘„‚")
     private static let closing = Set(".,!?;:)]}'\"»”’…—–")

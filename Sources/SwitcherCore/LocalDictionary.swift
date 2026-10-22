@@ -30,6 +30,10 @@ private final class PackagedSpeller {
 /// Call on the main thread: Hunspell instances are not shared across threads.
 public final class LocalDictionary {
     public static let shared = LocalDictionary()
+    // A subtitle-frequency token is not proof of a word. This entry has no
+    // support in either packaged Russian speller and shadows English "cat"
+    // under the physical layout mapping. Keep the upstream pack unchanged.
+    private static let rejectedRussianFrequencyTokens: Set<String> = ["сфе"]
     private let russian: PackagedSpeller?
     private let russianModern: PackagedSpeller?
     private let english: PackagedSpeller?
@@ -83,6 +87,7 @@ public final class LocalDictionary {
         if word.contains("-") { return recognizesCompound(word, layout) }
         guard (1...48).contains(word.count), word.allSatisfy({ $0.isLetter || $0 == "'" || $0 == "’" }) else { return false }
         let normalized = word.precomposedStringWithCanonicalMapping.lowercased().replacingOccurrences(of: "’", with: "'")
+        if layout == .russian && Self.rejectedRussianFrequencyTokens.contains(normalized) { return false }
         if recognizesCommon(normalized, layout) { return true }
         // Short forms in the large Russian source are frequently abbreviations
         // (ФКУ etc.), not evidence against "are" typed on a Cyrillic keyboard.
@@ -99,6 +104,7 @@ public final class LocalDictionary {
         if word.contains("-") { return recognizesCompound(word, layout) }
         guard (1...48).contains(word.count), word.allSatisfy({ $0.isLetter || $0 == "'" || $0 == "’" }) else { return false }
         let normalized = word.precomposedStringWithCanonicalMapping.lowercased().replacingOccurrences(of: "’", with: "'")
+        if layout == .russian && Self.rejectedRussianFrequencyTokens.contains(normalized) { return false }
         let frequency = layout == .russian ? russianFrequency : englishFrequency
         if frequency.contains(normalized) || CommonNames.recognizes(normalized, layout) ||
             SupplementalWords.recognizes(normalized, layout) { return true }

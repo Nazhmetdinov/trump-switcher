@@ -18,6 +18,13 @@ public enum SupplementalWords {
     нейроагент нейроагента нейроагенты нейроагентов
     мультиагент мультиагента мультиагенты
     скроллит скроллил скроллила скроллили заскринить
+    мем мемы рилс чаты фича фичи айти пуш пуши пушей скам
+    пин пины репо сорс фейк
+    трея трее пулреквест пулреквеста пулреквесты
+    офлайн свайп свайпнуть фидбек фидбека фидбеком
+    нейроагентами нейронками промптингу нейросетевым
+    кэширование кэширования мерж вайб вайбкодинг баги
+    лайк вебкамера апдейт лайфхак лайфхаки фичам
     """)
 
     public static let english = words("""
@@ -25,6 +32,8 @@ public enum SupplementalWords {
     sidepanel sidepanels worktree worktrees
     agentic codegen codemod codemods devtools
     cloudflare vercel dockerize dockerized dockerizing
+    api llm llms dockerfile webkit tokenizer tokenization
+    signup passcode webapp bugfix devops dataclass langchain patchset
     """)
 
     public static func recognizes(_ word: String, _ layout: Layout) -> Bool {
