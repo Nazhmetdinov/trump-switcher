@@ -94,6 +94,10 @@
     "Licenses/EnglishGB/LICENSE-en-GB.txt": {
       "bytes": 15122,
       "sha256": "df84246204e3c54cd24aebbc23714235f5fc41d754d53b65444a2afbf070130f"
+    },
+    "Licenses/RuSwitcher/LICENSE": {
+      "bytes": 1063,
+      "sha256": "89e712fa012d49b497e9b5ae6ac7050db40df2d5da6c9f82751d47c0cf422bbf"
     }
   },
   "ianaTLDs": {
@@ -115,5 +119,15 @@
     "license": "LGPL, see README_en_GB.txt and packaged license texts",
     "imported": "2026-10-12",
     "changes": "en_GB.aff/dic unchanged; supplementary British spellings and inflections."
+  },
+  "recognitionProtections": {
+    "repository": "https://github.com/rashn/RuSwitcher",
+    "commit": "436061c7fe7839ea52b1a5b4776c13611a868ddb",
+    "license": "MIT",
+    "sourceFiles": [
+      "macos/Sources/RuSwitcher/ShortWords.swift",
+      "macos/Sources/RuSwitcher/AutoSwitch.swift"
+    ],
+    "changes": "Adapted source-only short-token protection and target-side exact exclusions. No event transport or GPL heuristics imported."
   }
 }

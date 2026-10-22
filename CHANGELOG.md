@@ -1,5 +1,11 @@
 # История изменений / Changelog
 
+## 0.6.45 · build 84 · 2026-10-22
+
+- Адаптированы две защиты из открытого RuSwitcher (MIT): исключения учитывают также результат исправления, а короткие английские обозначения `vs`, `DJ`, `KB`, `JR`, `BP`, `YE`, `DS` не превращаются автоматически в русские слова. Свои явно заданные замены по-прежнему имеют приоритет над защитой коротких обозначений.
+- Защита согласована с существующей обработкой пунктуации: символ на клавише русской буквы не отсекается, если целое слово уже подтверждено словарём. Неоднозначные варианты сохраняются.
+- Сохранены словари, физические таблицы раскладок, порядок доставки текста и выбор языка после исправления. Указаны источник, точная ревизия и лицензия заимствований.
+
 ## 0.6.44 · build 83 · 2026-10-22
 
 - После успешного автоматического исправления остаётся раскладка исправленного слова. Убран безусловный возврат через 90 мс, который снова включал прежний язык перед следующим словом. При отменённой проверке без изменения текста прежняя раскладка по-прежнему восстанавливается.
@@ -85,6 +91,12 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.45 · build 84 · 2026-10-22
+
+- Adapted two MIT-licensed RuSwitcher protections: exclusions also check the selected replacement, while short English tokens `vs`, `DJ`, `KB`, `JR`, `BP`, `YE`, and `DS` remain unchanged. Explicit custom replacement rules still take priority over short-token protection.
+- Integrated the guards with existing punctuation handling, preserving recognized whole words containing letters on punctuation keys and leaving ambiguous input unchanged.
+- Retained dictionaries, physical layout tables, ordered text delivery, and the corrected language after a replacement. Recorded the upstream revision and bundled its license.
 
 ## 0.6.44 · build 83 · 2026-10-22
 

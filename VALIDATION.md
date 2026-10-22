@@ -1,5 +1,34 @@
 # Trump Switcher verification
 
+## 0.6.45 selective upstream protections — 2026-10-22
+
+Adapted two MIT-licensed RuSwitcher policies at revision
+`436061c7fe7839ea52b1a5b4776c13611a868ddb`: source-only protection for
+seven short English collision spellings and exclusions applied to the final
+replacement as well as the typed token. The upstream MIT notice is included in
+the app's pinned dictionary resources. Target exclusions are evaluated after
+candidate selection, so they cannot silently resolve an ambiguous partial word.
+Explicit rules retain priority over the new short-token guard.
+
+The new regression failed on the preceding release for `vs`; all 122 adapted
+policy cases now pass within 76,149 CoreChecks. They cover both Mac and PC Russian
+physical maps, case, wrappers, exclusions in both directions, mixed scripts,
+addresses, explicit rules and punctuation-key letters. In particular, `'dj` and
+`'kb` retain their existing whole-word conversions, while the existing ambiguity
+of `dj.` remains unchanged.
+
+The complete vocabulary audit matches the preceding release's outcome counts on
+all three Russian maps and ABC, in both directions: zero wrong replacements and
+zero changes to accepted source words. Mac/PC Russian retain 49,545 exact Russian
+and 29,925 exact English conversions; phonetic Russian retains 47,766 and 25,678.
+Collisions and unresolved candidates remain unchanged. Upstream dictionary bytes,
+input-source continuity and delivery code are unchanged. XNeur's speculative
+unknown-word/proto fallback and GPL code/data were reviewed but not imported.
+
+Release checks run without installing, changing permissions, posting key events,
+or testing in third-party applications. Intel is cross-compiled, not runtime
+validated on Intel hardware.
+
 ## 0.6.44 input-source continuity — 2026-10-22
 
 Successful automatic corrections retain the corrected word's input source.

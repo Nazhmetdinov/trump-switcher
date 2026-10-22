@@ -227,7 +227,7 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
         removeButtons[0] = button("Убрать из списка", view, x: 22, y: 60, width: 190, action: #selector(remove), tag: 0)
         button("Выбрать приложение…", view, x: 421, y: 103, width: 230, action: #selector(chooseApp))
         removeButtons[1] = button("Убрать из списка", view, x: 421, y: 60, width: 190, action: #selector(remove), tag: 1)
-        label("Пароли не исправляются. Большие и маленькие буквы в этом списке считаются одинаковыми.", view, y: 10, h: 36)
+        label("Список учитывает набранное слово и результат исправления. Регистр не важен.\nПароли не исправляются.", view, y: 10, h: 36)
     }
     private func makeRules() {
         let view = tab("Мои замены")

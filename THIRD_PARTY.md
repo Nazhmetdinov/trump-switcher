@@ -65,6 +65,23 @@ Upstream compressed pack hashes were verified before importing.
 
 No code or dictionaries from Punto Switcher are included.
 
+## RuSwitcher recognition protections (MIT)
+
+`Sources/SwitcherCore/ShortSourceProtection.swift` adapts the short-token
+collision guards from `macos/Sources/RuSwitcher/ShortWords.swift` at
+https://github.com/rashn/RuSwitcher/tree/436061c7fe7839ea52b1a5b4776c13611a868ddb.
+`AutoCorrection.swift` adapts the two-sided exclusion policy from
+`AutoSwitchPolicy.isDeniedWord` in `AutoSwitch.swift` at the same revision.
+Copyright (c) 2025 Rashns. The full MIT notice is bundled at
+`Dictionaries/Licenses/RuSwitcher/LICENSE`.
+
+Changes: short English collision spellings protect only the source, without
+expanding eligible automatic targets; target exclusions are checked after the
+complete candidate is selected, preserving this project's punctuation and
+ambiguity decisions, explicit-rule precedence, and physical layout conversion.
+No upstream event-injection implementation, system-spelling dependency, remote
+desktop handling, telemetry, or update code is included.
+
 ## Bzz boundary classification (MIT)
 
 `Sources/SwitcherCore/WordBoundary.swift` adapts Bzz's distinction between word

@@ -176,6 +176,7 @@ let resourceOverride = resourceArgument.flatMap { i in
 }
 // These checks deliberately exclude NSSpellChecker: packaged data must suffice.
 let bundled = LocalDictionary(includeSystem: false, directory: resourceOverride)
+count += importedPolicyChecks(dictionary: bundled)
 count += compoundDictionaryChecks(dictionary: bundled)
 count += lexicalPunctuationChecks(dictionary: bundled)
 count += reliabilityChecks(dictionary: bundled)

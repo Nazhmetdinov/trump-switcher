@@ -45,6 +45,16 @@ public struct AutoCorrection {
             while let char = core.last, closing.contains(char) { suffix.insert(core.removeLast(), at: suffix.startIndex) }
             return (prefix, core, suffix)
         }
+        // Adapt RuSwitcher's two-sided never-convert policy: an exclusion
+        // entered in its intended spelling also protects a wrong-layout token.
+        // Apply only after choosing a result; filtering competing candidates
+        // earlier could turn an ambiguity into an incorrect partial correction.
+        func makeResult(_ text: String, _ layout: Layout, exactCase: Bool = false) -> AutoCorrection? {
+            guard !settings.excludes(text) else { return nil }
+            let core = split(text).1
+            guard core == text || !settings.excludes(core) else { return nil }
+            return AutoCorrection(text: text, layout: layout, preservesExactCase: exactCase)
+        }
         let (prefix, stem, suffix) = split(token)
         guard !settings.excludes(stem) else { return nil }
         var variants = settings.punctuation && stem != token ? [("", token, ""), (prefix, stem, suffix)] : [("", token, "")]
@@ -68,7 +78,7 @@ public struct AutoCorrection {
         let matchingClosers: [Character: Character] = ["(": ")", "[": "]", "{": "}", "'": "'", "\"": "\"", "«": "»", "“": "”", "‘": "’", "„": "“", "‚": "‘"]
         for (before, input, after) in variants {
             if let rule = settings.rules.first(where: { $0.valid && $0.input == input }), settings.permits(rule.layout) {
-                return AutoCorrection(text: before + rule.output + after, layout: rule.layout, preservesExactCase: true)
+                return makeResult(before + rule.output + after, rule.layout, exactCase: true)
             }
         }
         func compound(_ word: String) -> Bool {
@@ -83,7 +93,15 @@ public struct AutoCorrection {
         // валюта -> dfk.nf, июль -> b.km, интересуюсь -> bynthtce.cm.
         if let direction = Conversion.direction(token) {
             let source: Layout = direction == .russian ? .english : .russian
-            if known(token, layout: source) || known(stem, layout: source) { return nil }
+            if known(token, layout: source) || known(stem, layout: source) ||
+                ShortSourceProtection.recognizes(token, source) { return nil }
+            if ShortSourceProtection.recognizes(stem, source) {
+                // Do not let a stripped short-token guard hide a proved whole
+                // word whose letter lives on a punctuation key: 'dj = эво.
+                // Retain the existing complete-word/punctuation policy here.
+                let full = convert(token, direction)
+                if !full.allSatisfy(\.isLetter) || !known(full, layout: direction) { return nil }
+            }
         }
         let literalAddress = isAddress(token) || (settings.punctuation && isAddress(stem))
         if literalAddress {
@@ -101,7 +119,7 @@ public struct AutoCorrection {
             for (before, input, after) in variants {
                 let candidate = convert(input, .english)
                 if candidate != input, isAddress(candidate) {
-                    return AutoCorrection(text: before + candidate + after, layout: .english)
+                    return makeResult(before + candidate + after, .english)
                 }
             }
         }
@@ -171,10 +189,11 @@ public struct AutoCorrection {
                let longest = literalCandidates.values.max() {
                 let preferred = literalCandidates.filter { $0.value == longest }
                 if preferred.count == 1, let text = preferred.keys.first, let candidate = candidates[text] {
-                    return candidate
+                    return makeResult(candidate.text, candidate.layout)
                 }
             }
-            return candidates.count == 1 ? candidates.values.first : nil
+            guard candidates.count == 1, let candidate = candidates.values.first else { return nil }
+            return makeResult(candidate.text, candidate.layout)
         }
         guard let target = direction else { return nil }
         guard settings.permits(target) else { return nil }
@@ -289,6 +308,6 @@ public struct AutoCorrection {
             }
         }
         guard answers.count == 1, let answer = answers.first, answer != token else { return nil }
-        return AutoCorrection(text: answer, layout: target)
+        return makeResult(answer, target)
     }
 }
