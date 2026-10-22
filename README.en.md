@@ -13,11 +13,11 @@ Trump Switcher corrects a word typed in the wrong keyboard layout. Type `ghbdtn`
 - **Your choice.** Optional launch at login, with no account, telemetry, cloud dictionary or auto-download.
 - **Inspectable.** Source code and dictionary provenance are public.
 
-Correction normally runs after Space; Enter and Tab are configurable boundaries. After correcting a word, the app returns to the input source that was active before it. Unambiguous punctuation can trigger correction immediately. Examples: `lkz` → `для`, `b` → `и`, `ghbdtn!` → `привет!`.
+Correction normally runs after Space; Enter and Tab are configurable boundaries. The corrected word's input source stays selected so you can continue typing in that language. It changes on a later manual or automatic switch. Unambiguous punctuation can trigger correction immediately. Examples: `lkz` → `для`, `b` → `и`, `ghbdtn!` → `привет!`.
 
 ## Install
 
-1. Download the DMG for your Mac: [Apple Silicon (M1 or newer)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.43/TrumpSwitcher-0.6.43-build82-AppleSilicon.dmg) or [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.43/TrumpSwitcher-0.6.43-build82-Intel.dmg). Requires **macOS 13+**.
+1. Download the DMG for your Mac: [Apple Silicon (M1 or newer)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.44/TrumpSwitcher-0.6.44-build83-AppleSilicon.dmg) or [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.44/TrumpSwitcher-0.6.44-build83-Intel.dmg). Requires **macOS 13+**.
 2. Open the image and drag **Trump Switcher** onto **Applications**.
 3. Start it from Applications. Its icon appears in the menu bar without opening a window or adding a Dock icon.
 4. Choose **«Разрешения macOS…»** (macOS Permissions) from the menu-bar icon and grant **Accessibility** access. This permits the app to inspect the current word and type its correction. The same menu opens settings and offers optional launch at login.

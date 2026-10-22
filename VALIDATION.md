@@ -1,5 +1,20 @@
 # Trump Switcher verification
 
+## 0.6.44 input-source continuity — 2026-10-22
+
+Successful automatic corrections retain the corrected word's input source.
+The previous unconditional 90 ms return is removed; the rollback ticket is used
+only when a preflight refuses the edit before events are posted.
+
+A new offline regression failed on the previous focus policy at the second word
+after a committed replacement and geometry-only AX wrapper recreation. It passes
+with the revised delivery policy in both correction directions. Separate physical
+key/payload checks cover every split of the next word between old-source queued
+events and newly selected-source events. Pending edits still cancel on an unproved
+wrapper change; later edits still require exact field and whole-word preflight.
+These checks exercise shared production policies and an editor model, without
+posting events, installing on this Mac, or claiming new third-party-app validation.
+
 ## Intel release variant — 2026-10-16
 
 Version 0.6.34 build 73 was cross-compiled for x86_64 with the macOS 26.5 SDK

@@ -117,6 +117,15 @@ func reliabilityChecks(dictionary: LocalDictionary) -> Int {
         sameLogicalField: false), "different editor cancels a held word")
     expect(!FocusTracking.shouldCancelPending(previousRole: "AXTextArea", nextRole: "AXTextArea", identityChanged: false,
         sameLogicalField: false), "unchanged editor retains a held word")
+    expect(FocusTracking.shouldCancelInput(previousRole: "AXTextArea", nextRole: "AXTextArea", identityChanged: true,
+        sameIdentifiedField: false, sameCapturedField: true, phase: .deciding),
+        "geometry alone cannot retain an uncommitted edit")
+    expect(!FocusTracking.shouldCancelInput(previousRole: "AXTextArea", nextRole: "AXTextArea", identityChanged: true,
+        sameIdentifiedField: false, sameCapturedField: true, phase: .delivering),
+        "wrapper churn after commit retains ordered typing")
+    expect(FocusTracking.shouldCancelInput(previousRole: "AXTextArea", nextRole: "AXTextArea", identityChanged: true,
+        sameIdentifiedField: false, sameCapturedField: false, phase: .delivering),
+        "a different field cancels later typing even after a commit")
     expect(FocusTracking.sameIdentifiedField(previousIdentity: "AXTextArea/id/composer", nextIdentity: "AXTextArea/id/composer",
         previousRole: "AXTextArea", nextRole: "AXTextArea"), "same stable editor identifier survives AX wrapper churn")
     expect(!FocusTracking.sameIdentifiedField(previousIdentity: "AXTextArea/rect/10/20/300", nextIdentity: "AXTextArea/rect/10/20/300",

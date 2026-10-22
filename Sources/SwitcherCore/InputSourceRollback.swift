@@ -1,6 +1,7 @@
 import Foundation
 
-/// Ownership of a temporary source switch, independent of Carbon and AX.
+/// Ownership of a source switch before the edit is committed, independent of Carbon and AX.
+/// Successful automatic edits keep their selected source; only refused preflights roll back.
 /// Failure must never overwrite a later user source or destination change.
 public struct InputSourceRollback {
     private let previous: KeyboardLayoutTable

@@ -1,6 +1,7 @@
 import Foundation
 
 public enum FocusTracking {
+    public enum PendingPhase { case deciding, delivering }
     private static let textRoles: Set<String> = ["AXTextField", "AXTextArea", "AXSecureTextField"]
     /// Some editors reuse one AX object for different controls. A changed
     /// stable identifier is a field change even when CFEqual still succeeds.
@@ -41,5 +42,17 @@ public enum FocusTracking {
                                            identityChanged: Bool, sameLogicalField: Bool) -> Bool {
         identityChanged && !sameLogicalField && textRoles.contains(previousRole ?? "") &&
             textRoles.contains(nextRole ?? "")
+    }
+
+    /// A geometry match cannot authorize a pending edit. Once the edit was
+    /// committed, however, wrapper recreation must not cancel its ordered
+    /// delivery or discard the next complete word. Every later edit still
+    /// needs its own exact field/text preflight.
+    public static func shouldCancelInput(previousRole: String?, nextRole: String?,
+                                         identityChanged: Bool, sameIdentifiedField: Bool,
+                                         sameCapturedField: Bool, phase: PendingPhase) -> Bool {
+        shouldCancelPending(previousRole: previousRole, nextRole: nextRole,
+            identityChanged: identityChanged, sameLogicalField: sameIdentifiedField) &&
+            (phase == .deciding || !sameCapturedField)
     }
 }

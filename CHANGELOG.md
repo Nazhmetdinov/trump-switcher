@@ -1,5 +1,11 @@
 # История изменений / Changelog
 
+## 0.6.44 · build 83 · 2026-10-22
+
+- После успешного автоматического исправления остаётся раскладка исправленного слова. Убран безусловный возврат через 90 мс, который снова включал прежний язык перед следующим словом. При отменённой проверке без изменения текста прежняя раскладка по-прежнему восстанавливается.
+- Обновление Accessibility-объекта того же поля после уже отправленной замены больше не сбрасывает очередь и следующее полное слово. Неподтверждённая замена и переход в другое поле по-прежнему отменяются; геометрия не разрешает редактирование без проверки текста.
+- Офлайн-регрессия воспроизводила пропуск второго слова до правки и проходит после неё в обоих направлениях. Проверены смешанные по времени клавиши следующего слова до и после выбора раскладки. Это проверка модели и сборки, а не новое подтверждение работы во всех сторонних приложениях.
+
 ## 0.6.43 · build 82 · 2026-10-22
 
 - Удалена ложная русская запись из решений распознавания: набранное в русской раскладке `сфе` теперь исправляется в `cat`, а не блокируется как якобы правильное русское слово. Исходные частотные файлы и их лицензии сохранены.
@@ -79,6 +85,12 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.44 · build 83 · 2026-10-22
+
+- Successful automatic corrections keep the corrected word's input source selected. Removed the unconditional 90 ms return that re-enabled the previous language before the next word. Refused preflights still restore the original source without changing text.
+- Recreation of the same field's Accessibility wrapper after a committed correction no longer cancels ordered delivery or drops the next complete word. Uncommitted edits and genuine field changes remain subject to cancellation and exact text/field checks.
+- An offline regression reproduced the skipped second word before the fix and passes afterward in both directions. Queued next-word keys captured before and after source selection were checked separately. This verifies the model and packages, not every third-party editor.
 
 ## 0.6.43 · build 82 · 2026-10-22
 

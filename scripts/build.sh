@@ -42,8 +42,8 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIconFile</key><string>TrumpAppIcon.icns</string>
 <key>CFBundleDisplayName</key><string>Trump Switcher</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.6.43</string>
-<key>CFBundleVersion</key><string>82</string>
+<key>CFBundleShortVersionString</key><string>0.6.44</string>
+<key>CFBundleVersion</key><string>83</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>LSUIElement</key><true/>
 <key>NSHighResolutionCapable</key><true/>

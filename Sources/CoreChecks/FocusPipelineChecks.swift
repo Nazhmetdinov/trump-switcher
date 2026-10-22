@@ -2,7 +2,7 @@ import Foundation
 import SwitcherCore
 
 /// Offline editor model. It combines the production focus policy, buffer,
-/// detector, exact-word preflight, keyboard plan, and source rollback. It does
+/// detector, exact-word preflight, keyboard plan, and input-source ownership. It does
 /// not post events, inspect other apps, or claim to exercise the AX adapter.
 func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
     var checks = 0
@@ -31,6 +31,7 @@ func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
         var role = "AXTextArea"
         var wrapper = 1
         var source = "com.apple.keylayout.ABC"
+        var committedDelivery = false
     }
     func focus(_ model: inout Model, field: Int, wrapper: Int, identity: String) {
         let changed = FocusTracking.changed(previousIdentity: model.identity, nextIdentity: identity,
@@ -44,6 +45,12 @@ func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
         }
         if FocusTracking.shouldCancelPending(previousRole: model.role, nextRole: model.role,
             identityChanged: changed, sameLogicalField: identified) {
+            if model.committedDelivery, FocusTracking.shouldCancelInput(
+                previousRole: model.role, nextRole: model.role, identityChanged: changed,
+                sameIdentifiedField: identified, sameCapturedField: sameLogical, phase: .delivering) {
+                model.buffer.reset(startOfWord: false)
+                model.committedDelivery = false
+            }
             if !sameLogical { model.buffer.reset() }
         }
         if FocusTracking.shouldReset(previousRole: model.role, nextRole: model.role,
@@ -67,6 +74,7 @@ func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
         let otherBefore = other.text
         let before = field.text
         let sourceBefore = model.source
+        var expectedSource = sourceBefore
         let mustVerify = model.buffer.requiresVerifiedText
         let token = model.buffer.finishWord()
         var corrected = false
@@ -97,18 +105,8 @@ func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
                 field.text = output
                 field.writes += 1
                 corrected = true
-                if table.id != sourceBefore {
-                    var selectedSource = table.id
-                    if manualSourceChange { selectedSource = "explicit-user-source" }
-                    let previous = sourceBefore == russian.id ? russian : english
-                    let rollback = InputSourceRollback(previous: previous, temporary: table,
-                        startedAt: 100, destinationPID: 42)!
-                    let result = rollback.restore(preserving: nil, currentSource: { selectedSource },
-                        foregroundPID: { 42 }, selectPrevious: { selectedSource = previous.id; return true },
-                        restoredAt: { 110 })
-                    expect((result != nil) == !manualSourceChange, "rollback ownership disagrees with manual switch")
-                    model.source = selectedSource
-                }
+                expectedSource = manualSourceChange ? "explicit-user-source" : table.id
+                model.source = expectedSource
             }
         }
         field.text += value // the held physical boundary is delivered once
@@ -119,8 +117,7 @@ func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
         } else if !corrected {
             expect(field.text == before + value, "uncorrected text or boundary changed")
         }
-        expect(model.source == (manualSourceChange && corrected ? "explicit-user-source" : sourceBefore),
-               "prior layout was not restored")
+        expect(model.source == expectedSource, "correction or manual choice did not retain its input source")
         return corrected
     }
 
@@ -159,6 +156,57 @@ func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
     expect(boundary(&geometry, " ") && geometry.fields[0].text == "для ",
            "same editor did not recover after exact word verification")
 
+    // The editor can rebuild its AX wrapper while the first replacement is
+    // already committed. The next
+    // complete word must still reach the recognizer in both directions.
+    for inputs in [["ghbdtn", "lkz", "b["], ["руддщ", "цщкдв", "руддщ"]] {
+        context = "consecutive words across committed wrapper churn \(inputs[0])"
+        var consecutive = Model()
+        consecutive.identity = "AXTextArea/rect/10/20/300"
+        consecutive.source = inputs[0].first?.isASCII == true ? english.id : russian.id
+        var expected = ""
+        for (index, input) in inputs.enumerated() {
+            if index > 0 {
+                consecutive.committedDelivery = true
+                focus(&consecutive, field: 0, wrapper: consecutive.wrapper + 1,
+                      identity: consecutive.identity)
+            }
+            type(&consecutive, input)
+            expect(boundary(&consecutive, " "), "word \(index + 1) was skipped after completed correction")
+            expected += expectedWords[input]! + " "
+            expect(consecutive.fields[0].text == expected, "consecutive word lost or mixed letters")
+        }
+    }
+
+    for (source, target, first, next) in [(english, russian, "привет", "работает"),
+                                         (russian, english, "hello", "keyboard")] {
+        // Keys for the next word can already be queued with the old source's
+        // Unicode. A successful switch must keep the target and reconcile every
+        // old/new split of that word, without asking for a second correction.
+        for split in 0...next.count {
+            context = "retained source, queued split \(split), \(target.id)"
+            let transition = QueuedLayoutTransition(previous: source, target: target,
+                boundary: 100, selectedAt: 1_000)
+            var token = TypingBuffer()
+            var editor = first + " "
+            for (index, char) in next.enumerated() {
+                let key = target.replacement(String(char))!
+                let stale = source.character(code: key.code, shift: key.shift,
+                    capsLock: key.capsLock, option: key.option)!
+                let payload = index < split ? stale : String(char)
+                let text = transition.normalized(payload, code: key.code, shift: key.shift,
+                    capsLock: key.capsLock, option: key.option, timestamp: 101 + UInt64(index),
+                    currentID: target.id, systemEvent: true) ?? payload
+                token.append(text); editor += text
+            }
+            let complete = token.finishWord()!
+            expect(complete == next && editor == first + " " + next, "queued next word mixed source payloads")
+            expect(AutoCorrection.detect(complete, recognizes: dictionary.recognizes,
+                recognizesFragment: dictionary.recognizesCommon, convert: convert) == nil,
+                "correct next word requested another switch")
+        }
+    }
+
     context = "reused AX object, new stable ID"
     var reused = Model()
     type(&reused, "r")
@@ -191,7 +239,7 @@ func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
     type(&manual, "lkz")
     expect(boundary(&manual, " ", manualSourceChange: true) &&
            manual.fields[0].text == "для " && manual.source == "explicit-user-source",
-           "rollback overrode a later user layout change")
+           "correction overrode a later user layout change")
 
     // Seeded sequences keep every failure reproducible. These combine partial
     // words, editor changes, wrapper recreation, boundaries and both layouts.

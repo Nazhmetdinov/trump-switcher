@@ -124,12 +124,6 @@ final class AutoMonitor {
     }
     private var pendingBoundary: HeldBoundary?
     private var deliveryFence: DeliveryFence?
-    private struct PendingSourceReturn {
-        let fenceID: UInt64
-        let ticket: InputSourceRollback
-        let previous: KeyboardLayoutTable
-    }
-    private var pendingSourceReturn: PendingSourceReturn?
     private var deliveryTap: CFMachPort?
     private var deliverySource: CFRunLoopSource?
     private var deliveryPID: pid_t?
@@ -195,8 +189,6 @@ final class AutoMonitor {
     private(set) var longestFocusMS: Double = 0
     private(set) var interruptedTaps = 0
     private(set) var reconciledKeys = 0
-    private(set) var returnedInputSources = 0
-    private(set) var skippedInputSourceReturns = 0
     private(set) var firstKeyFocusChecks = 0
     private(set) var rejectedContextKeys = 0
     private(set) var incompleteWords = 0
@@ -234,7 +226,7 @@ final class AutoMonitor {
     }
     var reliabilityStatus: String {
         (browserAccessibility.map { $0.status + "\n" } ?? "") + "Повторов с восстановленным нажатием: \(restoredRepeatPresses)\n" +
-        "Проверок нового поля на первой клавише: \(firstKeyFocusChecks) · исключённых клавиш: \(rejectedContextKeys)\nГраниц без полного слова: \(incompleteWords) · слов без нужды в замене / неоднозначных: \(unchangedWords) · замен на пунктуации: \(punctuationCorrections)\nТекст перед заменой проверен: \(verifiedEditorWords) · изменён редактором: \(changedEditorWords) · внешний ввод: \(foreignInputEvents)\nЗамены целым словом подтверждены: \(directCorrections) · без подтверждения: \(unconfirmedWrites)\nКлавиатурный способ: отправлено \(keyboardFallbacks) · подтверждено \(confirmedKeyboardWrites) · последующих изменений редактором: \(lateEditorChanges)\nВозврат раскладки: \(returnedInputSources) · пропущено при смене контекста: \(skippedInputSourceReturns)"
+        "Проверок нового поля на первой клавише: \(firstKeyFocusChecks) · исключённых клавиш: \(rejectedContextKeys)\nГраниц без полного слова: \(incompleteWords) · слов без нужды в замене / неоднозначных: \(unchangedWords) · замен на пунктуации: \(punctuationCorrections)\nТекст перед заменой проверен: \(verifiedEditorWords) · изменён редактором: \(changedEditorWords) · внешний ввод: \(foreignInputEvents)\nЗамены целым словом подтверждены: \(directCorrections) · без подтверждения: \(unconfirmedWrites)\nКлавиатурный способ: отправлено \(keyboardFallbacks) · подтверждено \(confirmedKeyboardWrites) · последующих изменений редактором: \(lateEditorChanges)\nПосле исправления сохраняется раскладка исправленного слова"
     }
     var hasPendingInput: Bool { cancelledInput != nil || pendingBoundary != nil || deliveryFence != nil || replayPID != nil || !heldEvents.isEmpty }
     var running: Bool { tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false }
@@ -757,10 +749,9 @@ final class AutoMonitor {
                 decisionStatus = "Не подготовлена доставка клавиш; текст не изменён"
                 return .pass
             }
-            if let sourceRollback, let fence = deliveryFence {
-                pendingSourceReturn = PendingSourceReturn(fenceID: fence.id, ticket: sourceRollback,
-                    previous: currentTable)
-            }
+            // A committed correction keeps its selected input source. The
+            // rollback ticket above belongs only to a refused preflight; an
+            // unconditional return here made every next word use the old language.
             // Transfer ownership before posting: the preflight watchdog can
             // no longer return a boundary already consumed by this batch.
             pendingBoundary = nil
@@ -1160,36 +1151,7 @@ final class AutoMonitor {
             self.deliveryFence = nil
             self.manualConversionGate.noteInputHandoff(at: ProcessInfo.processInfo.systemUptime)
             guard self.tap != nil else { return }
-            if self.pendingSourceReturn?.fenceID == fence.id {
-                // The destination's tail tap sees the final keyUp before the
-                // editor handles it. Keep later physical keys in our FIFO until
-                // that editor has had a turn to apply the complete replacement.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.09) { [weak self] in
-                    guard let self, self.tap != nil,
-                          self.pendingSourceReturn?.fenceID == fence.id else { return }
-                    self.finishSourceReturn(fenceID: fence.id)
-                    self.resumeAfterDelivery(fence)
-                }
-                return
-            }
             self.resumeAfterDelivery(fence)
-        }
-    }
-
-    private func finishSourceReturn(fenceID: UInt64) {
-        guard let pending = pendingSourceReturn, pending.fenceID == fenceID else { return }
-        pendingSourceReturn = nil
-        if let restored = pending.ticket.restore(preserving: transition,
-            currentSource: { InputSources.currentID() },
-            foregroundPID: { NSWorkspace.shared.frontmostApplication?.processIdentifier },
-            selectPrevious: { InputSources.selectID(pending.previous.id) },
-            restoredAt: { DispatchTime.now().uptimeNanoseconds }) {
-            transition = restored
-            sourceID = pending.previous.id
-            layout = InputSources.layout(forID: pending.previous.id)
-            returnedInputSources += 1
-        } else {
-            skippedInputSourceReturns += 1
         }
     }
 
@@ -1220,16 +1182,6 @@ final class AutoMonitor {
     private func flushHeldInput(interrupt: CGEvent? = nil,
                                 diagnosticOutcome: BoundaryDecisionHistory.Outcome = .cancelled,
                                 diagnosticReason: String = "Проверка отменена; исходные клавиши сохранены") {
-        if let interrupt, interrupt.type == .keyDown,
-           TypingShortcut.action(code: UInt16(clamping: interrupt.getIntegerValueField(.keyboardEventKeycode)),
-               command: interrupt.flags.contains(.maskCommand), control: interrupt.flags.contains(.maskControl),
-               option: interrupt.flags.contains(.maskAlternate), shift: interrupt.flags.contains(.maskShift),
-               function: interrupt.flags.contains(.maskSecondaryFn)) == .inputSource {
-            // A user's explicit source shortcut was captured after our word.
-            // Deliver it against the source the user actually saw, rather than
-            // silently restoring just before the shortcut reaches macOS.
-            pendingSourceReturn = nil
-        }
         recentSelectionProgress = nil
         let continuation = periodContinuation
         periodContinuation = nil
@@ -1299,7 +1251,6 @@ final class AutoMonitor {
     /// Cancellation revokes editing immediately, not ownership of held input.
     /// Drain the old process first, then let macOS route the interrupt normally.
     private func drainCancelledInput() {
-        guard pendingSourceReturn == nil else { return }
         guard let cancelled = cancelledInput else { return }
         if let originals = cancelledInput?.queue.takeDestinationBatch() {
             let events = originals.compactMap { event -> CGEvent? in
@@ -1413,7 +1364,6 @@ final class AutoMonitor {
         // A disabled/missing tail tap cannot prove that the last generated
         // character was consumed. Unblock owned originals, but never switch
         // their source underneath an unacknowledged replacement batch.
-        pendingSourceReturn = nil
         if cancelledInput == nil { flushHeldInput() }
         guard let cancelled = cancelledInput else {
             deliveryFence = nil
@@ -1602,7 +1552,11 @@ final class AutoMonitor {
                 identityChanged: changed, sameLogicalField: sameIdentifiedField)
             if actualFieldChanged {
                 recentSelectionProgress = nil
-                if hasPendingInput { cancel() }
+                if hasPendingInput, FocusTracking.shouldCancelInput(
+                    previousRole: focusedRole, nextRole: snapshot.role,
+                    identityChanged: changed, sameIdentifiedField: sameIdentifiedField,
+                    sameCapturedField: sameField,
+                    phase: pendingBoundary == nil ? .delivering : .deciding) { cancel() }
                 // Equal geometry may be wrapper churn in the same editor;
                 // retain that prefix only for exact whole-word verification.
                 // A distinct identity starts a fresh word on the first key.
@@ -1651,7 +1605,7 @@ final class AutoMonitor {
     func stop() {
         monitorSession &+= 1
         contextGeneration &+= 1; probeAgain = false; focusResetPending = false; settlingSnapshots = 0
-        cancel(); releaseCancelledInputAfterFailure(); pendingSourceReturn = nil
+        cancel(); releaseCancelledInputAfterFailure()
         permission.exclude(); physicalKeyReleases.reset()
         if let tap { CGEvent.tapEnable(tap: tap, enable: false); CFMachPortInvalidate(tap) }
         if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }

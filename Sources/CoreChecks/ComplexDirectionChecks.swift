@@ -31,8 +31,8 @@ func complexDirectionChecks(dictionary: LocalDictionary) -> Int {
             var eligibleRussian = 0, eligibleEnglish = 0, protectedCollisions = 0
 
             // Alternate RU→EN and EN→RU, including two consecutive corrections
-            // toward the same language. Model the one-word source return by making
-            // every token start in its deliberately wrong source again.
+            // toward the same language. Deliberately select a wrong source for
+            // each token to exercise detection independently of retained language.
             let sequences: [[Word]] = [
                 [russianWords[0], englishWords[0], russianWords[2], englishWords[2]],
                 [englishWords[3], russianWords[1], englishWords[1], russianWords[3]],
