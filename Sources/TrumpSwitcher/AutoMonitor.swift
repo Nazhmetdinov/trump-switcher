@@ -33,6 +33,9 @@ final class AutoMonitor {
     private var application: AXUIElement?
     private let replacementProbeQueue = DispatchQueue(label: "local.trumpswitcher.replacement-probe", qos: .userInitiated)
     private let focusQueue = DispatchQueue(label: "local.trumpswitcher.focus", qos: .userInitiated)
+    private let observationQueue = DispatchQueue(label: "local.trumpswitcher.observation", qos: .utility)
+    private var observationSerial: UInt64 = 0
+    private var observations: [UInt64: ReplacementPreflight.Cancellation] = [:]
     private var probeBusy = false
     private var probeAgain = false
     private var contextGeneration: UInt64 = 0
@@ -64,6 +67,9 @@ final class AutoMonitor {
     private var buffer = TypingBuffer()
     private var layout: Layout?
     private var sourceID: String?
+    // Language only, never previous words. Used solely to disambiguate the
+    // reviewed short English collision tokens within the current input field.
+    private var typingLanguage: Layout?
     private var physicalKeyReleases = PhysicalKeyReleaseTracker()
     private var restoredRepeatPresses = 0
     private func isOriginalInput(_ event: CGEvent) -> Bool {
@@ -161,7 +167,10 @@ final class AutoMonitor {
     private let dictionary = LocalDictionary.shared
     private let addresses = AddressRecognizer()
     private let keyboard = KeyboardLayouts()
-    var settings = CorrectionSettings() { didSet { cancel() } }
+    private var compiledExclusions = CompiledExclusions([])
+    var settings = CorrectionSettings() {
+        didSet { compiledExclusions = CompiledExclusions(settings.excludedWords); cancel() }
+    }
     private static let ownEvent: Int64 = 0x5452554d505357
     // Native input-context/cursor UI can temporarily stall an editor for about
     // half a second. The read runs off the tap thread; keep its boundary owned
@@ -203,6 +212,7 @@ final class AutoMonitor {
     private(set) var selectionKeyboardReplacements = 0
     private(set) var ownSelectionWaits = 0
     private(set) var confirmedKeyboardWrites = 0
+    private(set) var unobservedKeyboardWrites = 0
     private(set) var lateEditorChanges = 0
     private(set) var deliveryAcks = 0
     private(set) var deliveryTimeouts = 0
@@ -226,7 +236,7 @@ final class AutoMonitor {
     }
     var reliabilityStatus: String {
         (browserAccessibility.map { $0.status + "\n" } ?? "") + "Повторов с восстановленным нажатием: \(restoredRepeatPresses)\n" +
-        "Проверок нового поля на первой клавише: \(firstKeyFocusChecks) · исключённых клавиш: \(rejectedContextKeys)\nГраниц без полного слова: \(incompleteWords) · слов без нужды в замене / неоднозначных: \(unchangedWords) · замен на пунктуации: \(punctuationCorrections)\nТекст перед заменой проверен: \(verifiedEditorWords) · изменён редактором: \(changedEditorWords) · внешний ввод: \(foreignInputEvents)\nЗамены целым словом подтверждены: \(directCorrections) · без подтверждения: \(unconfirmedWrites)\nКлавиатурный способ: отправлено \(keyboardFallbacks) · подтверждено \(confirmedKeyboardWrites) · последующих изменений редактором: \(lateEditorChanges)\nПосле исправления сохраняется раскладка исправленного слова"
+        "Проверок нового поля на первой клавише: \(firstKeyFocusChecks) · исключённых клавиш: \(rejectedContextKeys)\nГраниц без полного слова: \(incompleteWords) · слов без нужды в замене / неоднозначных: \(unchangedWords) · замен на пунктуации: \(punctuationCorrections)\nТекст перед заменой проверен: \(verifiedEditorWords) · изменён редактором: \(changedEditorWords) · внешний ввод: \(foreignInputEvents)\nЗамены целым словом подтверждены: \(directCorrections) · без подтверждения: \(unconfirmedWrites)\nКлавиатурный способ: отправлено \(keyboardFallbacks) · подтверждено \(confirmedKeyboardWrites) · результат недоступен для проверки: \(unobservedKeyboardWrites) · последующих изменений редактором: \(lateEditorChanges)\nПосле исправления сохраняется раскладка исправленного слова"
     }
     var hasPendingInput: Bool { cancelledInput != nil || pendingBoundary != nil || deliveryFence != nil || replayPID != nil || !heldEvents.isEmpty }
     var running: Bool { tap.map { CGEvent.tapIsEnabled(tap: $0) } ?? false }
@@ -415,7 +425,7 @@ final class AutoMonitor {
             stateID: event.getIntegerValueField(.eventSourceStateID), userData: event.getIntegerValueField(.eventSourceUserData)) {
             // A text expander/another switcher is not physical typing. Its
             // generated characters must not trigger a second replacement.
-            foreignInputEvents += 1; buffer.reset(startOfWord: false); transition = nil; recentSelectionProgress = nil; periodContinuation = nil
+            foreignInputEvents += 1; typingLanguage = nil; buffer.reset(startOfWord: false); transition = nil; recentSelectionProgress = nil; periodContinuation = nil
             decisionStatus = "Ввод другой программой; автозамена пропущена"
             return true
         }
@@ -447,6 +457,7 @@ final class AutoMonitor {
             control: event.flags.contains(.maskControl), option: event.flags.contains(.maskAlternate), shift: event.flags.contains(.maskShift),
             function: event.flags.contains(.maskSecondaryFn)) {
             shortcut.apply(to: &buffer)
+            typingLanguage = nil
             if shortcut == .invalidate, key == Int64(kVK_Tab), event.flags.contains(.maskCommand),
                !event.flags.contains(.maskControl), !event.flags.contains(.maskAlternate) {
                 // A subsequent ordinary Cmd+Tab starts a different input
@@ -464,6 +475,7 @@ final class AutoMonitor {
             buffer.reset(startOfWord: false); decisionStatus = "Нестандартная раскладка"; return true
         }
         if let sourceID, sourceID != currentID {
+            typingLanguage = nil
             transition = nil; recentSelectionProgress = nil; periodContinuation = nil; InputSources.refreshEnabledSources()
             // Keep the actually typed characters across a manual source change.
             // The detector can resolve a complete mixed-script word at its boundary.
@@ -494,11 +506,12 @@ final class AutoMonitor {
         }} ?? false
         func detect(_ token: String, otherTable: KeyboardLayoutTable?) -> AutoCorrection? {
             AutoCorrection.detect(token, recognizes: dictionary.recognizes, recognizesFragment: dictionary.recognizesCommon,
-                isAddress: addresses.recognizes, settings: settings, convert: { value, target in
+                isAddress: addresses.recognizes, settings: settings, establishedLanguage: typingLanguage,
+                exclusions: compiledExclusions, convert: { value, target in
                     guard let to = target == currentLayout ? currentTable : otherTable else { return value }
                     let from = target == currentLayout ? otherTable : currentTable
                     return from?.convert(value, to: to) ?? value
-                })
+                }, onKnownSource: { self.typingLanguage = $0 })
         }
         var ellipsisCorrection: AutoCorrection?
         if settings.punctuation, buffer.isAccepting, let text,
@@ -768,6 +781,7 @@ final class AutoMonitor {
             // All events and the fence exist before any deletion. No yield
             // between Backspace, replacement characters and the boundary.
             layout = correction.layout
+            typingLanguage = correction.layout
             sourceID = replacementTable.id
             transition = QueuedLayoutTransition.committed(previous: currentTable, target: replacementTable,
                 boundary: boundaryEvent.timestamp, selectedAt: DispatchTime.now().uptimeNanoseconds, preserving: transition)
@@ -795,6 +809,10 @@ final class AutoMonitor {
             if replacesSelection { selectionKeyboardReplacements += 1 }
             if let replacementContext, !isAddressBoundary {
                 observeReplacement(replacementContext, original: observedOriginal, replacement: replacementText, boundary: boundaryText, keyboard: true)
+            } else {
+                // Opaque fields and submitted Enter/Tab cannot be verified by
+                // revisiting an earlier word. Posted is not text-confirmed.
+                unobservedKeyboardWrites += 1
             }
             automaticCorrections += 1
             appCorrections += 1
@@ -1441,24 +1459,64 @@ final class AutoMonitor {
 
     private func observeReplacement(_ context: ReplacementPreflight.Context, original: String,
                                     replacement: String, boundary: String, keyboard: Bool) {
-        let keys = receivedKeys, appPID = pid, generation = contextGeneration
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { [weak self] in
-            guard let self, self.tap != nil, self.receivedKeys == keys, self.pid == appPID,
-                  self.contextGeneration == generation else { return }
-            let result = DirectWordReplacement.observe(context, original: original,
-                replacement: replacement, boundary: boundary, pid: appPID)
-            switch result {
-            case .matches: if keyboard { self.confirmedKeyboardWrites += 1 }
-            case .changed:
-                self.lateEditorChanges += 1
-                self.decisionStatus = "Редактор изменил результат после записи; повторной записи не было"
-                self.report("Редактор изменил результат исправления")
-            case .unavailable: break
+        observationSerial &+= 1
+        let serial = observationSerial, appPID = pid, generation = contextGeneration
+        let cancellation = ReplacementPreflight.Cancellation()
+        if observations.count >= 8, let oldest = observations.keys.min() {
+            observations.removeValue(forKey: oldest)?.cancel()
+            unobservedKeyboardWrites += 1
+        }
+        observations[serial] = cancellation
+        let expires = ProcessInfo.processInfo.systemUptime + 0.3
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.31) { [weak self] in
+            if let self, let expired = self.observations.removeValue(forKey: serial) {
+                expired.cancel(); self.unobservedKeyboardWrites += 1
             }
         }
+        func schedule(_ attempt: Int) {
+            let delay: TimeInterval = attempt == 0 ? 0.03 : 0.06
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self, self.observations[serial] != nil else { return }
+                guard self.tap != nil, self.pid == appPID, self.contextGeneration == generation,
+                      cancellation.isActive, ProcessInfo.processInfo.systemUptime < expires else {
+                    self.observations.removeValue(forKey: serial)?.cancel()
+                    self.unobservedKeyboardWrites += 1; return
+                }
+                // AX IPC never runs on the keyboard/event-tap thread. Retries
+                // observe only; they neither gate input nor repeat a replacement.
+                self.observationQueue.async { [weak self] in
+                    guard cancellation.isActive, ProcessInfo.processInfo.systemUptime < expires else { return }
+                    let result = DirectWordReplacement.observe(context, original: original,
+                        replacement: replacement, boundary: boundary, pid: appPID)
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self, self.observations[serial] != nil else { return }
+                        guard cancellation.isActive, self.pid == appPID, self.contextGeneration == generation else {
+                            self.observations.removeValue(forKey: serial)?.cancel()
+                            self.unobservedKeyboardWrites += 1; return
+                        }
+                        switch result {
+                        case .matches:
+                            self.observations.removeValue(forKey: serial)?.cancel()
+                            if keyboard { self.confirmedKeyboardWrites += 1 }
+                        case .changed, .unavailable:
+                            if attempt < 2, ProcessInfo.processInfo.systemUptime < expires { schedule(attempt + 1) }
+                            else {
+                                self.observations.removeValue(forKey: serial)?.cancel()
+                                if case .changed = result {
+                                    self.lateEditorChanges += 1
+                                    self.report("Редактор изменил результат исправления; повторной записи не было")
+                                } else { self.unobservedKeyboardWrites += 1 }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        schedule(0)
     }
 
     private func invalidateFocus() {
+        typingLanguage = nil
         contextGeneration &+= 1; permission.begin(); focusResetPending = true; settlingSnapshots = 0
         transition = nil; recentSelectionProgress = nil; periodContinuation = nil
         // Mouse/Tab hasn't reached the editor while its tap callback is running.
@@ -1498,6 +1556,7 @@ final class AutoMonitor {
                 CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(made), .commonModes)
             }
             focused = nil; focusedRole = nil; focusedIdentity = nil
+            typingLanguage = nil
             buffer.reset(startOfWord: sessionReplayBoundary.startOfWordOnPIDChange())
             layout = nil; sourceID = nil; transition = nil; periodContinuation = nil
             permission.begin(); focusResetPending = true; settlingSnapshots = 0
@@ -1551,6 +1610,7 @@ final class AutoMonitor {
                 previousRole: focusedRole, nextRole: snapshot.role,
                 identityChanged: changed, sameLogicalField: sameIdentifiedField)
             if actualFieldChanged {
+                typingLanguage = nil
                 recentSelectionProgress = nil
                 if hasPendingInput, FocusTracking.shouldCancelInput(
                     previousRole: focusedRole, nextRole: snapshot.role,
@@ -1597,7 +1657,13 @@ final class AutoMonitor {
         cancel()
         return allowed
     }
-    func cancel() { flushHeldInput(); buffer.reset(startOfWord: false); layout = nil; sourceID = nil; transition = nil }
+    func cancel() {
+        typingLanguage = nil
+        unobservedKeyboardWrites += observations.count
+        for cancellation in observations.values { cancellation.cancel() }
+        observations.removeAll()
+        flushHeldInput(); buffer.reset(startOfWord: false); layout = nil; sourceID = nil; transition = nil
+    }
     private func detachObserver() {
         if let observer { CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .commonModes) }
         observer = nil; application = nil

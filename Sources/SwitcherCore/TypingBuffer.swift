@@ -39,7 +39,7 @@ public struct TypingBuffer {
     public mutating func append(_ text: String) {
         guard accepting else { return }
         wholeSelection = false
-        let allowed = "«»“”‘’„‚…—–§±`[];'.,/~{}:\"<>?!()@#$%^&*+-=_|\\№"
+        let allowed = "«»“”‘’„‚…—–‐‑§±`[];'.,/~{}:\"<>?!()@#$%^&*+-=_|\\№"
         guard text.utf16.count == 1, let char = text.first,
               char.isLetter || char.isNumber || allowed.contains(char), token.count < 128 else {
             reset(startOfWord: false)

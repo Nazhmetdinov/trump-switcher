@@ -56,6 +56,7 @@ public enum CommonNames {
     claude gemini deepseek perplexity midjourney cursor windsurf copilot anthropic ollama
     docker kubernetes postgresql postgres sqlite redis mongodb mysql nginx vite react nextjs
     intellij webstorm pycharm xcode swiftui appkit testflight facetime touchid faceid
+    devops powershell ebpf
     obsidian raycast alfred arc vivaldi brave thunderbird proton bitwarden
     screenshot screenshots screencast workflow workflows onboarding backend frontend fullstack
     pullrequest webhook webhooks autocomplete autocorrect hotkey hotkeys keymap keymaps

@@ -12,7 +12,7 @@ final class BrowserAccessibilitySupport {
         let lease: AccessibilityModeRequest.Lease
     }
     private var entries: [String: Entry] = [:]
-    private var attempts: [String: (app: NSRunningApplication, count: Int, time: TimeInterval)] = [:]
+    private var attempts: [String: (app: NSRunningApplication, budget: RetryBudget)] = [:]
     private var launchObserver: NSObjectProtocol?
     private var enabled = false
     private var session: UInt64 = 0
@@ -49,11 +49,12 @@ final class BrowserAccessibilitySupport {
             let key = "\(app.processIdentifier):\(app.launchDate?.timeIntervalSince1970 ?? -1)"
             guard entries[key] == nil else { return }
             let now = ProcessInfo.processInfo.systemUptime
-            if let attempt = attempts[key], attempt.count >= 3 || now - attempt.time < 1 { return }
             guard let url = app.bundleURL, let bundle = Bundle(url: url),
                   let principal = bundle.object(forInfoDictionaryKey: "NSPrincipalClass") as? String,
                   ["BrowserCrApplication", "ChromeBrowserApp", "ChromeApplication", "AtomApplication", "ElectronApplication"].contains(principal) else { return }
-            attempts[key] = (app, (attempts[key]?.count ?? 0) + 1, now)
+            var budget = attempts[key]?.budget ?? RetryBudget()
+            guard budget.begin(at: now) else { return }
+            attempts[key] = (app, budget)
             let root = AXUIElementCreateApplication(app.processIdentifier)
             ApplicationFocusBootstrap.prepare(root, budget: 0.003)
             guard AXUIElementSetMessagingTimeout(root, 0.01) == .success else { return }
@@ -69,7 +70,7 @@ final class BrowserAccessibilitySupport {
             if let lease {
                 entries[key] = Entry(app: app, root: root, lease: lease)
                 statusLock.lock(); preparedCount = entries.count; statusLock.unlock()
-            } else if (attempts[key]?.count ?? 3) < 3 {
+            } else if budget.shouldRetrySoon {
                 // A newly launched browser can announce itself before its AX
                 // service is ready. Retry on this worker even in manual mode.
                 let requestedSession = session

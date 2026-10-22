@@ -252,16 +252,18 @@ enum DirectWordReplacement {
     static func observe(_ context: ReplacementPreflight.Context, original: String,
                         replacement: String, boundary: String, pid: pid_t) -> Observation {
         guard !IsSecureEventInputEnabled(), NSWorkspace.shared.frontmostApplication?.processIdentifier == pid,
-              case .field(let now) = resolveFocus(pid: pid), CFEqual(now, context.element),
+              case .field(let now) = resolveFocus(pid: pid, budget: 0.010), CFEqual(now, context.element),
               let plan = context.plan(original: original, replacement: replacement),
-              let caret = selection(now), caret.length == 0 else { return .unavailable }
-        let expected = replacement + boundary
-        let end = plan.target.location + expected.utf16.count
-        // Enter/Tab may already have moved to a new line/field or submitted.
-        // A moved caret is not permission to revisit or repair previous text.
-        guard caret.location <= end, caret.location >= plan.target.location else { return .unavailable }
-        guard let actual = read(now, NSRange(location: plan.target.location, length: caret.location - plan.target.location)) else { return .unavailable }
-        return caret.location == end && actual == expected ? .matches : .changed
+              let receipt = ReplacementObservation(start: plan.target.location, replacement: replacement, boundary: boundary),
+              AXUIElementSetMessagingTimeout(now, 0.005) == .success,
+              let caret = selection(now), receipt.permits(caret: caret),
+              let actual = read(now, receipt.range),
+              !IsSecureEventInputEnabled(), NSWorkspace.shared.frontmostApplication?.processIdentifier == pid,
+              case .field(let current) = resolveFocus(pid: pid, budget: 0.005), CFEqual(now, current),
+              let finalCaret = selection(current), receipt.permits(caret: finalCaret) else { return .unavailable }
+        // Read the fixed replacement span only, even when the user has already
+        // typed the next word. Never read its tail, move a caret or repeat a write.
+        return receipt.confirms(actual, caret: finalCaret) ? .matches : .changed
     }
 
     /// AXTextOperation is a replacement command, not a selection-free edit.

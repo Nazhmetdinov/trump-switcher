@@ -16,7 +16,7 @@ public struct AutoCorrection {
         "он", "мы", "вы", "ты", "то", "до", "за", "из", "по", "от", "об",
         "же", "бы", "ли", "ну", "уж", "во", "со", "ко", "ее", "её", "ни", "та", "те", "ту",
         "их", "им", "ей", "ах", "ох", "эх", "ой", "ай", "ха", "хи", "фу", "ух",
-        "ёж", "ум", "ус", "яд", "юг", "ад", "ил", "ас"
+        "ёж", "ум", "ус", "яд", "юг", "ад", "ил", "ас", "ок"
     ]
     private static let shortEnglish: Set<String> = [
         "a", "i", "to", "of", "in", "is", "it", "he", "we", "be", "by", "at", "an", "as", "am",
@@ -33,12 +33,34 @@ public struct AutoCorrection {
     /// Exact exclusions win over explicit rules, which win over the dictionary.
     /// Physical conversion is injected by the macOS app; the default is the PC
     /// fixture used by portable/manual conversion checks.
-    public static func detect(_ token: String, recognizes: (String, Layout) -> Bool,
-                              recognizesFragment: ((String, Layout) -> Bool)? = nil,
+    public static func detect(_ token: String, recognizes rawRecognizes: (String, Layout) -> Bool,
+                              recognizesFragment rawRecognizesFragment: ((String, Layout) -> Bool)? = nil,
                               isAddress: (String) -> Bool = AddressRecognizer.shared.recognizes,
                               settings: CorrectionSettings = CorrectionSettings(),
-                              convert: (String, Layout) -> String = { Conversion.convert($0, to: $1) }) -> AutoCorrection? {
-        guard (1...128).contains(token.utf16.count), !settings.excludes(token) else { return nil }
+                              establishedLanguage: Layout? = nil,
+                              exclusions compiledExclusions: CompiledExclusions? = nil,
+                              convert: (String, Layout) -> String = { Conversion.convert($0, to: $1) },
+                              onKnownSource: ((Layout) -> Void)? = nil) -> AutoCorrection? {
+        guard (1...128).contains(token.utf16.count) else { return nil }
+        let exclusions = compiledExclusions ?? CompiledExclusions(settings.excludedWords)
+        guard !exclusions.contains(token) else { return nil }
+        // Punctuation variants often ask Hunspell about the same spelling.
+        // Cache only inside this decision: no typed-word history or shared state.
+        var wordCache: [String: Bool] = [:], fragmentCache: [String: Bool] = [:]
+        func recognizes(_ word: String, _ layout: Layout) -> Bool {
+            let key = (layout == .russian ? "r:" : "e:") + word
+            if let result = wordCache[key] { return result }
+            let result = rawRecognizes(word, layout); wordCache[key] = result
+            return result
+        }
+        let recognizesFragment: ((String, Layout) -> Bool)? = rawRecognizesFragment.map { raw in
+            { word, layout in
+                let key = (layout == .russian ? "r:" : "e:") + word
+                if let result = fragmentCache[key] { return result }
+                let result = raw(word, layout); fragmentCache[key] = result
+                return result
+            }
+        }
         func split(_ value: String) -> (String, String, String) {
             var core = value; var prefix = ""; var suffix = ""
             while let char = core.first, opening.contains(char) { prefix.append(core.removeFirst()) }
@@ -50,13 +72,14 @@ public struct AutoCorrection {
         // Apply only after choosing a result; filtering competing candidates
         // earlier could turn an ambiguity into an incorrect partial correction.
         func makeResult(_ text: String, _ layout: Layout, exactCase: Bool = false) -> AutoCorrection? {
-            guard !settings.excludes(text) else { return nil }
+            guard !exclusions.contains(text) else { return nil }
             let core = split(text).1
-            guard core == text || !settings.excludes(core) else { return nil }
-            return AutoCorrection(text: text, layout: layout, preservesExactCase: exactCase)
+            guard core == text || !exclusions.contains(core) else { return nil }
+            let output = exactCase ? text : LexicalNormalization.hyphens(text)
+            return AutoCorrection(text: output, layout: layout, preservesExactCase: exactCase)
         }
         let (prefix, stem, suffix) = split(token)
-        guard !settings.excludes(stem) else { return nil }
+        guard !exclusions.contains(stem) else { return nil }
         var variants = settings.punctuation && stem != token ? [("", token, ""), (prefix, stem, suffix)] : [("", token, "")]
         if settings.punctuation, !prefix.isEmpty, !suffix.isEmpty {
             // Opening quote/bracket keys can be э/х while the final sign really
@@ -82,7 +105,7 @@ public struct AutoCorrection {
             }
         }
         func compound(_ word: String) -> Bool {
-            let parts = word.split(separator: "-", omittingEmptySubsequences: false)
+            let parts = LexicalNormalization.hyphens(word).split(separator: "-", omittingEmptySubsequences: false)
             return (2...3).contains(parts.count) && parts.allSatisfy { !$0.isEmpty && $0.allSatisfy(\.isLetter) }
         }
         func known(_ word: String, layout: Layout) -> Bool {
@@ -93,9 +116,11 @@ public struct AutoCorrection {
         // валюта -> dfk.nf, июль -> b.km, интересуюсь -> bynthtce.cm.
         if let direction = Conversion.direction(token) {
             let source: Layout = direction == .russian ? .english : .russian
-            if known(token, layout: source) || known(stem, layout: source) ||
-                ShortSourceProtection.recognizes(token, source) { return nil }
-            if ShortSourceProtection.recognizes(stem, source) {
+            if known(token, layout: source) || known(stem, layout: source) {
+                onKnownSource?(source); return nil
+            }
+            if ShortSourceProtection.recognizes(token, source, establishedLanguage: establishedLanguage) { return nil }
+            if ShortSourceProtection.recognizes(stem, source, establishedLanguage: establishedLanguage) {
                 // Do not let a stripped short-token guard hide a proved whole
                 // word whose letter lives on a punctuation key: 'dj = эво.
                 // Retain the existing complete-word/punctuation policy here.
@@ -143,7 +168,7 @@ public struct AutoCorrection {
             // identifiers, addresses or a manually truncated token.
             guard (settings.punctuation || (prefix.isEmpty && suffix.isEmpty)),
                   (2...48).contains(stem.count),
-                  stem.allSatisfy({ $0.isLetter || letterKeys.contains($0) || $0 == "’" || $0 == "-" }), partialLayout else { return nil }
+                  stem.allSatisfy({ $0.isLetter || letterKeys.contains($0) || $0 == "’" || LexicalNormalization.hyphenCharacters.contains($0) }), partialLayout else { return nil }
             var candidates: [String: AutoCorrection] = [:]
             var wholeWordCandidates = Set<String>()
             var literalCandidates: [String: Int] = [:]
@@ -207,7 +232,7 @@ public struct AutoCorrection {
         // EN ':' / '"' are RU 'Ж' / 'Э'; Mac RU '"' is EN '@', and 'ё' is '\\'.
         // A blanket symbol/capital ban discarded valid words before parsing them.
         // A correctly spelled dotted abbreviation/word pair is not a mistake.
-        let parts = stem.split(whereSeparator: { ".,…!?;:-—–".contains($0) }).map(String.init)
+        let parts = stem.split(whereSeparator: { ".,…!?;:-‐‑—–".contains($0) }).map(String.init)
         if parts.count > 1 && parts.allSatisfy({ known($0, layout: source) }) { return nil }
         var answers = Set<String>()
         var wholeWordAnswers = Set<String>()
@@ -261,26 +286,27 @@ public struct AutoCorrection {
                 // Compact phrases/abbreviations without spaces. Both pieces
                 // must be known in the target; letters such as б/ю are kept
                 // inside whole words if the whole converted word is known.
-                let components = candidate.split(whereSeparator: { ".,…!?;:-—–".contains($0) }).map(String.init)
+                let components = candidate.split(whereSeparator: { ".,…!?;:-‐‑—–".contains($0) }).map(String.init)
                 if components.count > 1 && components.allSatisfy({ accept($0, partial: true) }) { record(before + candidate + after, before: before) }
             }
         }
         if answers.isEmpty && settings.punctuation {
             // Literal punctuation may separate two mistyped words without a
             // space. Do not split comma/period inside a recognized whole word.
-            let components = stem.split(whereSeparator: { ".,…!?;:-—–".contains($0) }).map(String.init)
+            let components = stem.split(whereSeparator: { ".,…!?;:-‐‑—–".contains($0) }).map(String.init)
             if components.count > 1 {
                 var result = prefix; var current = ""; var didChange = false; var valid = true
                 func flush() {
                     guard !current.isEmpty else { return }
                     if known(current, layout: source) { valid = false }
-                    else if let correction = detect(current, recognizes: recognizes, recognizesFragment: recognizesFragment, isAddress: isAddress, settings: settings, convert: convert), correction.layout == target {
+                    else if let correction = detect(current, recognizes: recognizes, recognizesFragment: recognizesFragment, isAddress: isAddress, settings: settings,
+                                                    establishedLanguage: establishedLanguage, exclusions: exclusions, convert: convert), correction.layout == target {
                         result += correction.text; didChange = true
                     } else { valid = false }
                     current = ""
                 }
                 for char in stem {
-                    if ".,…!?;:-—–".contains(char) { flush(); result.append(char) }
+                    if ".,…!?;:-‐‑—–".contains(char) { flush(); result.append(char) }
                     else { current.append(char) }
                 }
                 flush()

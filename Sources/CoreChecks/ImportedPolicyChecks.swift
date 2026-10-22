@@ -19,10 +19,14 @@ func importedPolicyChecks(dictionary: LocalDictionary) -> Int {
             AutoCorrection.detect(input, recognizes: dictionary.recognizes,
                 recognizesFragment: dictionary.recognizesCommon, settings: settings, convert: convert)
         }
-        for token in ["vs", "dj", "kb", "jr", "bp", "ye", "ds"] {
-            for value in [token, token.capitalized, token.uppercased(), "(" + token + ")!"] {
-                expect(detected(value) == nil, "preserve genuine short English token \(value) on \(id)")
+        for (token, word) in [("vs", "мы"), ("dj", "во"), ("kb", "ли"), ("jr", "ок"),
+                              ("bp", "из"), ("ye", "ну"), ("ds", "вы")] {
+            for (value, expected) in [(token, word), (token.capitalized, word.capitalized), ("(" + token + ")!", "(" + word + ")!")] {
+                expect(detected(value)?.text == expected, "restore short Russian word \(word) on \(id)")
             }
+            expect(detected(token.uppercased()) == nil, "preserve uppercase English abbreviation on \(id)")
+            var caps = CorrectionSettings(); caps.allowAllCaps = true
+            expect(detected(token.uppercased(), caps) == nil, "abbreviation protection also applies with all-caps conversion enabled")
         }
         for word in ["эво", "эли"] {
             expect(detected(russian.convert(word, to: english))?.text == word,

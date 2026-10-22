@@ -1,5 +1,38 @@
 # Trump Switcher verification
 
+## 0.6.46 targeted reliability and latency fixes — 2026-10-22
+
+435 new targeted checks cover delayed browser preparation, continued-typing
+readback plans, overflow/selection/navigation refusal, compiled 5,000-entry
+exclusions, pauses from 30 ms to two minutes, modern inflections, case-aware
+names, ASCII/typographic hyphens, short English context and isolated Russian
+short words. The revised imported-policy cases separately cover case, wrappers,
+all-caps settings, explicit-rule precedence and target exclusions.
+
+76,598 CoreChecks pass. The full bare-frequency audit exactly retains the previous
+six outcome rows (ignoring execution time): zero incorrect replacements and zero
+changes to accepted source words. This audit contains no one-/two-letter words;
+the new short-word/context checks are independent of those frequency packs.
+A local warm-corpus sample measured detection p50 0.024 ms, p95 0.120 ms,
+maximum 0.160 ms across 320 decisions. This measures recognition only, not AX,
+keyboard delivery, cold startup, user-app latency or a guarantee on other Macs.
+
+Production observation now uses a separate serial worker, a maximum of eight
+pending receipts, three bounded read-only attempts and expiry. It reads at most
+the fixed 129-unit replacement span while allowing up to 128 units of later
+caret advancement; it never reads that tail or writes a repair. Foreground,
+field, selection and secure-input checks surround readback. Observation itself
+never gates physical input; preflight and ordered-delivery safeguards remain.
+Focus safety queries share a 25 ms requested budget rather than accumulating a
+new timeout at every descendant. A delayed AX reply still grants no edit.
+
+Compiled exclusions retain only user settings. Per-decision spelling caches are
+discarded on return; language context retains no words and never resolves unknown
+spelling or whole-word/punctuation ambiguity. No OpenCorpora import, speculative
+suffix generation, fuzzy replacement, event posting, installation, permission
+changes or third-party-app testing is part of this release verification.
+Intel is cross-compiled and package-verified, not runtime-tested on Intel hardware.
+
 ## 0.6.45 selective upstream protections — 2026-10-22
 
 Adapted two MIT-licensed RuSwitcher policies at revision

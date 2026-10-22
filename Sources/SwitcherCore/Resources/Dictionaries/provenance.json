@@ -128,6 +128,6 @@
       "macos/Sources/RuSwitcher/ShortWords.swift",
       "macos/Sources/RuSwitcher/AutoSwitch.swift"
     ],
-    "changes": "Adapted source-only short-token protection and target-side exact exclusions. No event transport or GPL heuristics imported."
+    "changes": "Adapted uppercase/context-aware source-only short-token protection and target-side exact exclusions. Context stores only the language, not prior words. No upstream event transport or GPL heuristics imported."
   }
 }

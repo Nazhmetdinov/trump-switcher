@@ -84,7 +84,7 @@ public final class LocalDictionary {
     }
 
     public func recognizes(_ word: String, _ layout: Layout) -> Bool {
-        if word.contains("-") { return recognizesCompound(word, layout) }
+        if word.contains(where: { LexicalNormalization.hyphenCharacters.contains($0) }) { return recognizesCompound(word, layout) }
         guard (1...48).contains(word.count), word.allSatisfy({ $0.isLetter || $0 == "'" || $0 == "’" }) else { return false }
         let normalized = word.precomposedStringWithCanonicalMapping.lowercased().replacingOccurrences(of: "’", with: "'")
         if layout == .russian && Self.rejectedRussianFrequencyTokens.contains(normalized) { return false }
@@ -101,7 +101,7 @@ public final class LocalDictionary {
     /// Stronger evidence for a fragment obtained by stripping a potential б/ю/ж.
     /// Supplementary rare forms must not manufacture punctuation ambiguity.
     public func recognizesCommon(_ word: String, _ layout: Layout) -> Bool {
-        if word.contains("-") { return recognizesCompound(word, layout) }
+        if word.contains(where: { LexicalNormalization.hyphenCharacters.contains($0) }) { return recognizesCompound(word, layout) }
         guard (1...48).contains(word.count), word.allSatisfy({ $0.isLetter || $0 == "'" || $0 == "’" }) else { return false }
         let normalized = word.precomposedStringWithCanonicalMapping.lowercased().replacingOccurrences(of: "’", with: "'")
         if layout == .russian && Self.rejectedRussianFrequencyTokens.contains(normalized) { return false }
@@ -116,7 +116,7 @@ public final class LocalDictionary {
     }
 
     private func recognizesCompound(_ word: String, _ layout: Layout) -> Bool {
-        let normalized = word.precomposedStringWithCanonicalMapping.lowercased()
+        let normalized = LexicalNormalization.hyphens(word).precomposedStringWithCanonicalMapping.lowercased()
         guard CompoundWords.valid(normalized, layout: layout) else { return false }
         return (layout == .russian ? russianCompounds : englishCompounds).contains(normalized)
     }

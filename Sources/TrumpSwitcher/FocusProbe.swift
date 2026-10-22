@@ -50,12 +50,17 @@ struct FocusSnapshot {
     let enabled: Bool?
     let identity: String?
     let milliseconds: Double
-    static func read(pid: pid_t) -> FocusSnapshot {
+    static func read(pid: pid_t, budget: TimeInterval = 0.025) -> FocusSnapshot {
         let started = ProcessInfo.processInfo.systemUptime
+        let deadline = started + max(0, min(0.025, budget))
         let application = AXUIElementCreateApplication(pid)
-        ApplicationFocusBootstrap.prepare(application, budget: 0.003)
-        AXUIElementSetMessagingTimeout(application, 0.01)
+        ApplicationFocusBootstrap.prepare(application, budget: min(0.003, max(0, budget)))
+        func prepare(_ node: AXUIElement) -> Bool {
+            let remaining = deadline - ProcessInfo.processInfo.systemUptime
+            return remaining > 0 && AXUIElementSetMessagingTimeout(node, Float(min(0.005, remaining))) == .success
+        }
         func focused(_ node: AXUIElement) -> AXUIElement? {
+            guard prepare(node) else { return nil }
             var value: CFTypeRef?
             guard AXUIElementCopyAttributeValue(node, kAXFocusedUIElementAttribute as CFString, &value) == .success,
                   let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
@@ -64,14 +69,12 @@ struct FocusSnapshot {
         var next = focused(application)
         for _ in 0..<4 {
             guard let node = next else { break }
-            AXUIElementSetMessagingTimeout(node, 0.01)
             guard let child = focused(node), !CFEqual(node, child) else { break }
             next = child
         }
         var role: String?; var subrole: String?; var protected: Bool?; var enabled: Bool?; var identity: String?
         var verifiedMetadata = false
-        if let next {
-            AXUIElementSetMessagingTimeout(next, 0.01)
+        if let next, prepare(next) {
             let names = [kAXRoleAttribute, kAXSubroleAttribute, "AXProtectedContent", kAXEnabledAttribute,
                          "AXIdentifier", kAXPositionAttribute, kAXSizeAttribute] as CFArray
             var values: CFArray?

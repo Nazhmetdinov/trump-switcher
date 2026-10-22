@@ -35,7 +35,9 @@ public struct CorrectionSettings: Codable, Equatable {
     public var rules: [CorrectionRule] = []
     public init() {}
     public func excludes(_ token: String) -> Bool {
-        excludedWords.contains { $0.caseInsensitiveCompare(token) == .orderedSame }
+        guard !excludedWords.isEmpty else { return false }
+        let normalized = LexicalNormalization.exclusionKey(token)
+        return excludedWords.contains { LexicalNormalization.exclusionKey($0) == normalized }
     }
     public func excludesApp(_ id: String) -> Bool {
         excludedApps.contains { $0.caseInsensitiveCompare(id) == .orderedSame }

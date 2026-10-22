@@ -75,8 +75,10 @@ https://github.com/rashn/RuSwitcher/tree/436061c7fe7839ea52b1a5b4776c13611a868dd
 Copyright (c) 2025 Rashns. The full MIT notice is bundled at
 `Dictionaries/Licenses/RuSwitcher/LICENSE`.
 
-Changes: short English collision spellings protect only the source, without
-expanding eligible automatic targets; target exclusions are checked after the
+Changes: short English collision spellings protect uppercase abbreviations or
+a source established by a preceding known English word. Language context stores
+only the language and resets on focus/manual-source changes; lowercase isolated
+Russian function words remain eligible. Target exclusions are checked after the
 complete candidate is selected, preserving this project's punctuation and
 ambiguity decisions, explicit-rule precedence, and physical layout conversion.
 No upstream event-injection implementation, system-spelling dependency, remote

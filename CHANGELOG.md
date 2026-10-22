@@ -1,5 +1,14 @@
 # История изменений / Changelog
 
+## 0.6.46 · build 85 · 2026-10-22
+
+- Восстановлены исправления коротких русских слов `bp → из`, `ds → вы`, `kb → ли`, `vs → мы` и других. Прописные сокращения защищены; после известного английского слова короткие английские обозначения сохраняются. Контекст содержит только язык и сбрасывается при смене поля, ручной раскладки или внешнем вводе.
+- Добавлены полные проверенные словоформы современных терминов: «видеосозвонами», «нейроагентам», «промптах», «пулреквестами», `timezones`, `worktree's` и другие. Исправлена обработка внутреннего регистра для `DevOps`, `PowerShell`, `eBPF`.
+- Типографские дефисы U+2010/U+2011 учитываются при распознавании и в исключениях. Верно набранный текст сохраняется; при исправлении раскладки используется обычный дефис, доступный физической клавиатуре.
+- Подготовка доступности Chromium снова допускает попытки после ограниченного периода ожидания вместо пожизненного отказа после трёх неудач в одном процессе.
+- Проверка результата замены перенесена с потока ввода на отдельную очередь. Продолжение набора не отменяет чтение точно ограниченного участка исправления. Проверка не задерживает клавиши и не выполняет повторных записей; непроверенный результат учитывается отдельно.
+- Уменьшены повторные словарные запросы в рамках одного решения, исключения подготавливаются при изменении настроек. Проверка безопасности фокуса использует общий бюджет, а паузы внутри слова не сбрасывают его буфер. Неоднозначные варианты пунктуации по-прежнему не угадываются.
+
 ## 0.6.45 · build 84 · 2026-10-22
 
 - Адаптированы две защиты из открытого RuSwitcher (MIT): исключения учитывают также результат исправления, а короткие английские обозначения `vs`, `DJ`, `KB`, `JR`, `BP`, `YE`, `DS` не превращаются автоматически в русские слова. Свои явно заданные замены по-прежнему имеют приоритет над защитой коротких обозначений.
@@ -91,6 +100,15 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.46 · build 85 · 2026-10-22
+
+- Restored short Russian conversions including `bp → из`, `ds → вы`, `kb → ли`, and `vs → мы`. Uppercase abbreviations remain protected; a preceding known English word protects short English tokens in that field. Context stores only the language and resets on field, manual-source, or external-input changes.
+- Added reviewed modern inflections, including `timezones` and `worktree's`, and enabled internal-capital spellings `DevOps`, `PowerShell`, and `eBPF` through the curated name policy.
+- Recognize U+2010/U+2011 hyphens in compounds and exclusions. Correct source text is untouched; corrections use a physically typeable ASCII hyphen.
+- Chromium Accessibility preparation can recover after a bounded cooldown instead of permanently stopping after three failures in the same process.
+- Moved replacement observation off the input thread. Continued typing no longer cancels readback of the fixed replacement span. Observations never gate keys or repeat a write; unobserved results are counted separately.
+- Deduplicate dictionary lookups within a decision, compile exclusions on settings changes, and bound focus-safety probing with one total budget. Mid-word pauses preserve the token. Intrinsically ambiguous punctuation remains unchanged.
 
 ## 0.6.45 · build 84 · 2026-10-22
 
