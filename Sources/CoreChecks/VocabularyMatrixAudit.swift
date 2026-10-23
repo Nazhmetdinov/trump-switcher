@@ -140,7 +140,7 @@ func runVocabularyMatrixAudit() throws {
                            casing: String, decoration: String, allCaps: Bool = false) throws {
                     var settings = CorrectionSettings(); settings.allowAllCaps = allCaps
                     let actual = AutoCorrection.detect(input, recognizes: dictionary.recognizes,
-                        recognizesFragment: dictionary.recognizesCommon, settings: settings, convert: convert)?.text
+                        recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, settings: settings, convert: convert)?.text
                     let success = actual == expected
                     checked += 1; totals["checks", default: 0] += 1
                     if success { passed += 1; totals["passed", default: 0] += 1 }

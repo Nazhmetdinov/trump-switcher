@@ -20,7 +20,7 @@ func lexicalPunctuationChecks(dictionary: LocalDictionary) -> Int {
         }
         func detect(_ text: String, settings: CorrectionSettings = CorrectionSettings()) -> String? {
             AutoCorrection.detect(text, recognizes: dictionary.recognizes,
-                recognizesFragment: dictionary.recognizesCommon, settings: settings, convert: convert)?.text
+                recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, settings: settings, convert: convert)?.text
         }
         // A real inflection (конечною) must not consume one literal ellipsis dot.
         for (input, expected) in [("rjytxyj...", "конечно..."), ("(rjytxyj)...", "(конечно)..."),

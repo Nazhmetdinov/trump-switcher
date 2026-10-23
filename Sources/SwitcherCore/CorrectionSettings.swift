@@ -1,5 +1,18 @@
 import Foundation
 
+public struct WordExclusionRule: Codable, Equatable {
+    public enum Match: String, Codable, CaseIterable { case exact, prefix, contains }
+    public var text: String
+    public var match: Match
+    public init(_ text: String, match: Match) { self.text = text; self.match = match }
+    public var valid: Bool {
+        !text.isEmpty && text.utf16.count <= 128 && (match == .exact || text.count >= 2) &&
+        !text.contains(where: \.isWhitespace) &&
+        !text.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains)
+    }
+    public var key: String { match.rawValue + ":" + LexicalNormalization.exclusionKey(text) }
+}
+
 public struct CorrectionRule: Codable, Equatable, Identifiable {
     public var id: UUID
     public var input: String
@@ -31,13 +44,14 @@ public struct CorrectionSettings: Codable, Equatable {
     public var preferredRussian = "com.apple.keylayout.Russian"
     public var preferredEnglish = "com.apple.keylayout.ABC"
     public var excludedWords: [String] = []
+    // Optional for synthesized Codable compatibility with every existing file.
+    // Absence means no pattern rules; old exact exclusions are never reinterpreted.
+    public var wordExclusionRules: [WordExclusionRule]? = nil
     public var excludedApps: [String] = []
     public var rules: [CorrectionRule] = []
     public init() {}
     public func excludes(_ token: String) -> Bool {
-        guard !excludedWords.isEmpty else { return false }
-        let normalized = LexicalNormalization.exclusionKey(token)
-        return excludedWords.contains { LexicalNormalization.exclusionKey($0) == normalized }
+        CompiledExclusions(excludedWords, rules: wordExclusionRules ?? []).contains(token)
     }
     public func excludesApp(_ id: String) -> Bool {
         excludedApps.contains { $0.caseInsensitiveCompare(id) == .orderedSame }
@@ -49,6 +63,9 @@ public struct CorrectionSettings: Codable, Equatable {
               settings.rules.count <= 1000, Set(settings.rules.map(\.input)).count == settings.rules.count,
               Set(settings.rules.map(\.id)).count == settings.rules.count, settings.excludedWords.count <= 5000, settings.excludedApps.count <= 1000,
               settings.rules.allSatisfy(\.valid),
+              (settings.wordExclusionRules?.count ?? 0) <= 500,
+              (settings.wordExclusionRules ?? []).allSatisfy(\.valid),
+              Set((settings.wordExclusionRules ?? []).map(\.key)).count == (settings.wordExclusionRules?.count ?? 0),
               settings.excludedWords.allSatisfy({ !$0.isEmpty && $0.utf16.count <= 128 && !$0.contains(where: \.isWhitespace) && !$0.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) }),
               settings.excludedApps.allSatisfy({ !$0.isEmpty && $0.count <= 256 && !$0.contains(where: \.isWhitespace) && !$0.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) }) else { return nil }
         return settings

@@ -51,7 +51,7 @@ func supplementalVocabularyChecks(dictionary: LocalDictionary) -> Int {
         }
         func detected(_ token: String) -> String? {
             AutoCorrection.detect(token, recognizes: dictionary.recognizes,
-                recognizesFragment: dictionary.recognizesCommon, convert: convert)?.text
+                recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert)?.text
         }
         expect(!dictionary.recognizes("сфе", .russian), "invalid subtitle-frequency token cannot shadow English cat")
         expect(detected(abc.convert("cat", to: russian)) == "cat", "cat typed in Russian layout converts to English")

@@ -24,6 +24,7 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
     private var removeButtons: [Int: NSButton] = [:]
     private var emptyLabels: [Int: NSTextField] = [:]
     private let wordField = NSTextField()
+    private let wordMatch = NSPopUpButton()
     private let sourceField = NSTextField()
     private let targetField = NSTextField()
     private let targetLayout = NSPopUpButton()
@@ -218,16 +219,19 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
         let view = tab("Не менять")
         label("Где исправления не нужны", view, y: 482, h: 34, bold: true, size: 22)
         label("Добавьте слова, которые нужно оставлять как есть, или приложения, в которых вам не нужна замена.", view, y: 434, h: 42)
-        list(0, view, x: 22, y: 148, w: 375, h: 270, columns: [("word", "Не менять эти слова и адреса", 348)],
+        list(0, view, x: 22, y: 184, w: 375, h: 234, columns: [("word", "Не менять: слова и фрагменты", 348)],
              empty: "Пока здесь пусто.\nМожно добавить имя, сокращение или адрес.")
         list(1, view, x: 421, y: 148, w: 375, h: 270, columns: [("app", "Не исправлять в этих приложениях", 348)],
              empty: "Приложения пока не добавлены.\nВыберите нужное кнопкой ниже.")
         field(wordField, "Например: git", "Слово, которое не нужно менять", view, x: 22, y: 104, w: 245)
-        button("Добавить слово", view, x: 273, y: 103, width: 124, action: #selector(addWord))
+        wordMatch.addItems(withTitles: ["Совпадает целиком", "Начинается с", "Содержит"])
+        wordMatch.setAccessibilityLabel("Условие исключения слова")
+        wordMatch.frame = NSRect(x: 22, y: 144, width: 375, height: 28); view.addSubview(wordMatch)
+        button("Добавить", view, x: 273, y: 103, width: 124, action: #selector(addWord))
         removeButtons[0] = button("Убрать из списка", view, x: 22, y: 60, width: 190, action: #selector(remove), tag: 0)
         button("Выбрать приложение…", view, x: 421, y: 103, width: 230, action: #selector(chooseApp))
         removeButtons[1] = button("Убрать из списка", view, x: 421, y: 60, width: 190, action: #selector(remove), tag: 1)
-        label("Список учитывает набранное слово и результат исправления. Регистр не важен.\nПароли не исправляются.", view, y: 10, h: 36)
+        label("Проверяются набранное слово и результат исправления, без учёта регистра.\nДля «Начинается с» и «Содержит» введите минимум 2 символа. Пароли не исправляются.", view, y: 10, h: 36)
     }
     private func makeRules() {
         let view = tab("Мои замены")
@@ -412,7 +416,7 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
         }
     }
     func numberOfRows(in tableView: NSTableView) -> Int {
-        if tableView === tables[0] { return settings.excludedWords.count }
+        if tableView === tables[0] { return settings.excludedWords.count + (settings.wordExclusionRules?.count ?? 0) }
         if tableView === tables[1] { return settings.excludedApps.count }
         return settings.rules.count
     }
@@ -427,7 +431,13 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
         appNames[id] = name; return name
     }
     func tableView(_ tableView: NSTableView, objectValueFor tableColumn: NSTableColumn?, row: Int) -> Any? {
-        if tableView === tables[0] { return settings.excludedWords[row] }
+        if tableView === tables[0] {
+            if row < settings.excludedWords.count { return settings.excludedWords[row] }
+            let rule = settings.wordExclusionRules![row - settings.excludedWords.count]
+            let label: String
+            switch rule.match { case .exact: label = "Целиком"; case .prefix: label = "Начинается с"; case .contains: label = "Содержит" }
+            return label + ": " + rule.text
+        }
         if tableView === tables[1] { return appName(settings.excludedApps[row]) }
         let rule = settings.rules[row]
         return tableColumn?.identifier.rawValue == "input" ? rule.input : rule.output
@@ -497,9 +507,23 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
         guard !word.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
             error("Введите слово заново: в тексте есть невидимые служебные символы."); return
         }
-        guard !settings.excludes(word) else { error("Это слово уже есть в списке — добавлять его снова не нужно."); return }
-        var next = settings; next.excludedWords.append(word)
-        if commit(next, "Добавлено. Это слово больше не будет исправляться.") { wordField.stringValue = "" }
+        guard WordExclusionRule.Match.allCases.indices.contains(wordMatch.indexOfSelectedItem) else { return }
+        let match = WordExclusionRule.Match.allCases[wordMatch.indexOfSelectedItem]
+        let rule = WordExclusionRule(word, match: match)
+        guard rule.valid else { error("Для исключения по началу или части слова нужны минимум 2 символа."); return }
+        var next = settings
+        if match == .exact {
+            guard !settings.excludes(word) else { error("Это слово уже защищено правилом в списке."); return }
+            guard settings.excludedWords.count < 5000 else { error("Достигнут предел: 5000 точных исключений."); return }
+            next.excludedWords.append(word)
+        } else {
+            let rules = settings.wordExclusionRules ?? []
+            guard !rules.contains(where: { $0.key == rule.key }) else { error("Это правило уже есть в списке."); return }
+            guard rules.count < 500 else { error("Достигнут предел: 500 правил по фрагментам."); return }
+            next.wordExclusionRules = rules + [rule]
+        }
+        if commit(next, match == .exact ? "Добавлено. Это слово больше не будет исправляться." :
+                  "Правило добавлено. Совпадающие слова не будут исправляться.") { wordField.stringValue = "" }
     }
     @objc private func chooseApp() {
         let panel = NSOpenPanel(); panel.canChooseFiles = true; panel.canChooseDirectories = false
@@ -550,7 +574,16 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
         let index = sender.tag; let row = tables[index].selectedRow
         guard row >= 0, row < numberOfRows(in: tables[index]) else { return }
         var next = settings
-        switch index { case 0: next.excludedWords.remove(at: row); case 1: next.excludedApps.remove(at: row); default: next.rules.remove(at: row) }
+        switch index {
+        case 0:
+            if row < next.excludedWords.count { next.excludedWords.remove(at: row) }
+            else {
+                next.wordExclusionRules?.remove(at: row - next.excludedWords.count)
+                if next.wordExclusionRules?.isEmpty == true { next.wordExclusionRules = nil }
+            }
+        case 1: next.excludedApps.remove(at: row)
+        default: next.rules.remove(at: row)
+        }
         if commit(next, "Запись удалена из списка.") { tables[index].deselectAll(nil); if index == 2 { newRule() }; updateLists() }
     }
     @objc private func openPermission() { permission() }

@@ -36,7 +36,7 @@ func reviewedVocabularyChecks(dictionary: LocalDictionary) -> Int {
             }
             func detect(_ text: String, settings: CorrectionSettings = CorrectionSettings()) -> String? {
                 AutoCorrection.detect(text, recognizes: dictionary.recognizes,
-                    recognizesFragment: dictionary.recognizesCommon, settings: settings, convert: convert)?.text
+                    recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, settings: settings, convert: convert)?.text
             }
             for (layout, words) in entries {
                 var exact = 0, ambiguous = 0

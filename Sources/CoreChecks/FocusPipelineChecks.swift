@@ -80,7 +80,7 @@ func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
         var corrected = false
         if let token,
            let correction = AutoCorrection.detect(token, recognizes: dictionary.recognizes,
-                recognizesFragment: dictionary.recognizesCommon, convert: convert),
+                recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert),
            let plan = WordReplacementPlan(original: token, replacement: correction.text,
                 selection: NSRange(location: before.utf16.count, length: 0),
                 beforeCaret: before, afterCaret: nil) {
@@ -202,7 +202,7 @@ func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
             let complete = token.finishWord()!
             expect(complete == next && editor == first + " " + next, "queued next word mixed source payloads")
             expect(AutoCorrection.detect(complete, recognizes: dictionary.recognizes,
-                recognizesFragment: dictionary.recognizesCommon, convert: convert) == nil,
+                recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert) == nil,
                 "correct next word requested another switch")
         }
     }

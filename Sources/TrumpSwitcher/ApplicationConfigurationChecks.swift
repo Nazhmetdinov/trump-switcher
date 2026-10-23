@@ -53,6 +53,7 @@ enum ApplicationConfigurationChecks {
         }
         var configured = CorrectionSettings()
         configured.excludedWords = ["git", "Яндекс", "yandex.ru"]
+        configured.wordExclusionRules = [.init("нейро", match: .prefix), .init("cloud", match: .contains)]
         configured.excludedApps = ["local.example.editor"]
         configured.rules = [CorrectionRule(input: "zz", output: "тест текста", russian: true)]
         configured.preferredRussian = InputSources.russianIDs[1]; configured.preferredEnglish = InputSources.englishIDs[1]
@@ -228,6 +229,28 @@ enum ApplicationConfigurationChecks {
         wordTable.selectRowIndexes(IndexSet(integer: wordCount - 1), byExtendingSelection: false)
         send(button("remove:", tag: 0))
         expect(!store.settings.excludes("localword"), "selected exclusion removed without affecting other entries")
+        let wordMatch = views.compactMap { $0 as? NSPopUpButton }.first { $0.accessibilityLabel() == "Условие исключения слова" }!
+        expect(wordMatch.indexOfSelectedItem == 0, "new exclusion defaults to legacy exact mode")
+        wordMatch.selectItem(at: 1)
+        word.stringValue = "localprefix"; send(button("addWord"))
+        expect(store.settings.excludes("LOCALPREFIXword") && !store.settings.excludes("xlocalprefix"), "prefix UI rule is anchored")
+        let patternCount = store.settings.wordExclusionRules!.count
+        word.stringValue = "LOCALPREFIX"; send(button("addWord"))
+        expect(store.settings.wordExclusionRules!.count == patternCount, "duplicate UI pattern refused")
+        word.stringValue = "x"; send(button("addWord"))
+        expect(store.settings.wordExclusionRules!.count == patternCount, "single-character broad pattern refused")
+        wordTable.selectRowIndexes(IndexSet(integer: store.settings.excludedWords.count + patternCount - 1), byExtendingSelection: false)
+        send(button("remove:", tag: 0))
+        expect(!store.settings.excludes("localprefixword") && store.settings.wordExclusionRules == configured.wordExclusionRules,
+               "pattern removal preserves exact words and other patterns")
+        wordMatch.selectItem(at: 2)
+        word.stringValue = "localmiddle"; send(button("addWord"))
+        expect(store.settings.excludes("xLOCALMIDDLEy"), "contains UI rule matches within the word")
+        failSave = true
+        word.stringValue = "unsavedpattern"; send(button("addWord"))
+        expect(!store.settings.excludes("xunsavedpatterny") && word.stringValue == "unsavedpattern", "failed pattern save retains form without changing rules")
+        failSave = false
+        wordMatch.selectItem(at: 0)
         let source = field("Если я набрал"), target = field("Заменять на")
         source.stringValue = "mytest"; target.stringValue = "привет"; send(button("saveRule"))
         expect(store.settings.rules.last?.output == "привет" && store.settings.rules.last?.russian == true,
@@ -261,7 +284,8 @@ enum ApplicationConfigurationChecks {
         let customBeforeReset = store.settings
         send(button("recommended"))
         expect(store.settings.excludedWords == customBeforeReset.excludedWords && store.settings.excludedApps == customBeforeReset.excludedApps &&
-               store.settings.rules == customBeforeReset.rules, "recommended mode preserves every user list")
+               store.settings.rules == customBeforeReset.rules && store.settings.wordExclusionRules == customBeforeReset.wordExclusionRules,
+               "recommended mode preserves every user list")
         expect(controller.window?.isVisible == false, "settings checks never displayed a window")
         if Bundle.main.bundleURL.pathExtension == "app", let resources = Bundle.main.resourceURL {
             for (suffix, pixels) in [("",22),("@2x",44),("@3x",66)] {

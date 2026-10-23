@@ -22,7 +22,7 @@ func reliabilityChecks(dictionary: LocalDictionary) -> Int {
     }
     func detect(_ token: String) -> String? {
         AutoCorrection.detect(token, recognizes: dictionary.recognizes,
-                              recognizesFragment: dictionary.recognizesCommon, convert: convert)?.text
+                              recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert)?.text
     }
     for (input, expected) in [("lkz", "для"), ("Lkz", "Для"), ("b[", "их"), ("B[", "Их")] {
         expect(detect(input) == expected, "reported complete word has an explicit expected result: " + input)

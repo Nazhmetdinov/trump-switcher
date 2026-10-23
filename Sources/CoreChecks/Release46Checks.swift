@@ -52,7 +52,7 @@ func release46Checks(dictionary: LocalDictionary) -> Int {
         }
         func detect(_ input: String, _ settings: CorrectionSettings = CorrectionSettings()) -> String? {
             AutoCorrection.detect(input, recognizes: dictionary.recognizes,
-                recognizesFragment: dictionary.recognizesCommon, settings: settings, convert: convert)?.text
+                recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, settings: settings, convert: convert)?.text
         }
         for (target, words) in [(Layout.russian, ["видеосозвон", "видеосозвонами", "нейроагентам", "промптах", "пулреквестами"]),
                                 (.english, ["timezones", "worktree's", "DevOps", "PowerShell", "eBPF"])] {
@@ -82,7 +82,7 @@ func release46Checks(dictionary: LocalDictionary) -> Int {
         var established: Layout?
         func contextual(_ input: String) -> String? {
             AutoCorrection.detect(input, recognizes: dictionary.recognizes,
-                recognizesFragment: dictionary.recognizesCommon, establishedLanguage: established,
+                recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, establishedLanguage: established,
                 convert: convert, onKnownSource: { established = $0 })?.text
         }
         expect(contextual("hello") == nil && established == .english, "known English word establishes language without retaining its text")
@@ -104,7 +104,7 @@ func release46Checks(dictionary: LocalDictionary) -> Int {
             let key = (layout == .russian ? "r:" : "e:") + word
             calls[key, default: 0] += 1
             return dictionary.recognizes(word, layout)
-        }, recognizesFragment: dictionary.recognizesCommon, convert: convert)
+        }, recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert)
         expect(!calls.isEmpty && calls.values.allSatisfy { $0 == 1 }, "one expensive full-word lookup per spelling/direction in a decision")
     }
     let samples = ["ghbdtn", "lkz", "b[", "(ghbdtn)...", "ytqhjfutynfv", "цщклекууэы", "руддщ", "levf."]
@@ -112,7 +112,7 @@ func release46Checks(dictionary: LocalDictionary) -> Int {
     for _ in 0..<40 {
         for input in samples {
             let start = ProcessInfo.processInfo.systemUptime
-            _ = AutoCorrection.detect(input, recognizes: dictionary.recognizes, recognizesFragment: dictionary.recognizesCommon)
+            _ = AutoCorrection.detect(input, recognizes: dictionary.recognizes, recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff)
             elapsed.append((ProcessInfo.processInfo.systemUptime - start) * 1000)
         }
     }

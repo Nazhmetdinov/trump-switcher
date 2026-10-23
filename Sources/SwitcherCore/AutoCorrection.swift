@@ -35,6 +35,7 @@ public struct AutoCorrection {
     /// fixture used by portable/manual conversion checks.
     public static func detect(_ token: String, recognizes rawRecognizes: (String, Layout) -> Bool,
                               recognizesFragment rawRecognizesFragment: ((String, Layout) -> Bool)? = nil,
+                              recognizesBackoff: ((String, Layout) -> Bool)? = nil,
                               isAddress: (String) -> Bool = AddressRecognizer.shared.recognizes,
                               settings: CorrectionSettings = CorrectionSettings(),
                               establishedLanguage: Layout? = nil,
@@ -42,11 +43,18 @@ public struct AutoCorrection {
                               convert: (String, Layout) -> String = { Conversion.convert($0, to: $1) },
                               onKnownSource: ((Layout) -> Void)? = nil) -> AutoCorrection? {
         guard (1...128).contains(token.utf16.count) else { return nil }
-        let exclusions = compiledExclusions ?? CompiledExclusions(settings.excludedWords)
+        let exclusions = compiledExclusions ?? CompiledExclusions(settings.excludedWords, rules: settings.wordExclusionRules ?? [])
         guard !exclusions.contains(token) else { return nil }
         // Punctuation variants often ask Hunspell about the same spelling.
         // Cache only inside this decision: no typed-word history or shared state.
-        var wordCache: [String: Bool] = [:], fragmentCache: [String: Bool] = [:]
+        var wordCache: [String: Bool] = [:], fragmentCache: [String: Bool] = [:], backoffCache: [String: Bool] = [:]
+        func usesBackoff(_ word: String, _ layout: Layout) -> Bool {
+            guard let recognizesBackoff else { return false }
+            let key = (layout == .russian ? "r:" : "e:") + word
+            if let result = backoffCache[key] { return result }
+            let result = recognizesBackoff(word, layout); backoffCache[key] = result
+            return result
+        }
         func recognizes(_ word: String, _ layout: Layout) -> Bool {
             let key = (layout == .russian ? "r:" : "e:") + word
             if let result = wordCache[key] { return result }
@@ -183,6 +191,7 @@ public struct AutoCorrection {
             var candidates: [String: AutoCorrection] = [:]
             var wholeWordCandidates = Set<String>()
             var literalCandidates: [String: Int] = [:]
+            var protectedMixedSpellings = Set<String>()
             for destination in [Layout.russian, .english] where settings.permits(destination) {
                 let opposite: Layout = destination == .russian ? .english : .russian
                 for (before, input, after) in variants {
@@ -202,7 +211,10 @@ public struct AutoCorrection {
                         guard settings.shortWords, knownShort(word, destination) else { continue }
                     } else if !recognizes(word.lowercased(), destination) { continue }
                     if (!before.isEmpty || !after.isEmpty || !mappedPrefix.isEmpty || !mappedSuffix.isEmpty),
-                       word.count > 2, let recognizesFragment, !recognizesFragment(word.lowercased(), destination) { continue }
+                       word.count > 2, let recognizesFragment, !recognizesFragment(word.lowercased(), destination) {
+                        if usesBackoff(word.lowercased(), destination) { protectedMixedSpellings.insert(word.lowercased()) }
+                        continue
+                    }
                     let capitals = word.filter(\.isLetter)
                     guard !capitals.dropFirst().contains(where: \.isUppercase) ||
                           (settings.allowAllCaps && capitals.allSatisfy(\.isUppercase)) ||
@@ -226,10 +238,12 @@ public struct AutoCorrection {
                let longest = literalCandidates.values.max() {
                 let preferred = literalCandidates.filter { $0.value == longest }
                 if preferred.count == 1, let text = preferred.keys.first, let candidate = candidates[text] {
+                        guard protectedMixedSpellings.allSatisfy({ $0 == String(candidate.text.filter(\.isLetter)).lowercased() }) else { return nil }
                     return makeResult(candidate.text, candidate.layout)
                 }
             }
             guard candidates.count == 1, let candidate = candidates.values.first else { return nil }
+            guard protectedMixedSpellings.allSatisfy({ $0 == String(candidate.text.filter(\.isLetter)).lowercased() }) else { return nil }
             return makeResult(candidate.text, candidate.layout)
         }
         guard let target = direction else { return nil }
@@ -251,6 +265,7 @@ public struct AutoCorrection {
         var answersWithConvertedPrefix = Set<String>()
         var literalAnswers: [String: Int] = [:]
         var wrappedAnswer: String?
+        var protectedRareSpellings = Set<String>()
         func record(_ answer: String, before: String) {
             answers.insert(answer)
             if before.count <= (encodedPrefixIndex ?? 0) { answersWithConvertedPrefix.insert(answer) }
@@ -274,7 +289,14 @@ public struct AutoCorrection {
                 }
                 return true // Do not rely on spelling services for one letter.
             }
-            if partial, let recognizesFragment { return recognizesFragment(word.lowercased(), target) }
+            if partial, let recognizesFragment {
+                if recognizesFragment(word.lowercased(), target) { return true }
+                // A rare complete word is insufficient to authorize stripping
+                // punctuation, but it must veto a competing split which loses
+                // one of its letters (f,vfqrbyf. must not become а,майкина.).
+                if usesBackoff(word.lowercased(), target) { protectedRareSpellings.insert(word.lowercased()) }
+                return false
+            }
             return recognizes(word.lowercased(), target)
         }
         for (before, input, after) in variants {
@@ -311,7 +333,7 @@ public struct AutoCorrection {
                 func flush() {
                     guard !current.isEmpty else { return }
                     if known(current, layout: source) { valid = false }
-                    else if let correction = detect(current, recognizes: recognizes, recognizesFragment: recognizesFragment, isAddress: isAddress, settings: settings,
+                    else if let correction = detect(current, recognizes: recognizes, recognizesFragment: recognizesFragment, recognizesBackoff: recognizesBackoff, isAddress: isAddress, settings: settings,
                                                     establishedLanguage: establishedLanguage, exclusions: exclusions, convert: convert), correction.layout == target {
                         result += correction.text; didChange = true
                     } else { valid = false }
@@ -346,6 +368,8 @@ public struct AutoCorrection {
             }
         }
         guard answers.count == 1, let answer = answers.first, answer != token else { return nil }
+        let answerLetters = String(answer.filter(\.isLetter)).lowercased()
+        guard protectedRareSpellings.allSatisfy({ $0 == answerLetters }) else { return nil }
         return makeResult(answer, target)
     }
 }

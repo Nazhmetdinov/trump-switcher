@@ -57,7 +57,7 @@ func complexDirectionChecks(dictionary: LocalDictionary) -> Int {
                             // English word privet. No algorithm can infer intent
                             // from that token alone; preserving it is mandatory.
                             expect(AutoCorrection.detect(wrong, recognizes: dictionary.recognizes,
-                                recognizesFragment: dictionary.recognizesCommon, convert: convert) == nil,
+                                recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert) == nil,
                                 "real source word preserved \(englishID)/\(russianID) \(wrong)")
                             protectedCollisions += 1
                             continue
@@ -73,7 +73,7 @@ func complexDirectionChecks(dictionary: LocalDictionary) -> Int {
                         let immediate = ![" ", "\n", "\t"].contains(boundary)
                         let input = wrong + (immediate ? boundary : "")
                         let correction = AutoCorrection.detect(input, recognizes: dictionary.recognizes,
-                            recognizesFragment: dictionary.recognizesCommon, convert: convert)
+                            recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert)
                         expect(correction?.text == word.spelling + (immediate ? boundary : "") &&
                                correction?.layout == word.language,
                                "complete correction \(englishID)/\(russianID) sequence \(sequenceIndex) word \(wordIndex) boundary \(boundary)")
@@ -121,7 +121,7 @@ func complexDirectionChecks(dictionary: LocalDictionary) -> Int {
                 let wrong = target.convert(word.spelling, to: source)
                 if wrong.count > 2 && dictionary.recognizes(wrong.lowercased(), word.language == .russian ? .english : .russian) {
                     expect(AutoCorrection.detect(wrong, recognizes: dictionary.recognizes,
-                        recognizesFragment: dictionary.recognizesCommon, convert: convert) == nil,
+                        recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert) == nil,
                         "quoted source-word collision must not be converted \(englishID)/\(russianID) \(wrong)")
                     continue
                 }
@@ -130,11 +130,11 @@ func complexDirectionChecks(dictionary: LocalDictionary) -> Int {
                         let input = open + wrong + close + ending
                         let expected = open + word.spelling + close + ending
                         let correction = AutoCorrection.detect(input, recognizes: dictionary.recognizes,
-                            recognizesFragment: dictionary.recognizesCommon, convert: convert)
+                            recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert)
                         expect(correction?.text == expected && correction?.layout == word.language,
                                "balanced wrapper \(englishID)/\(russianID) \(input) → \(expected)")
                         expect(AutoCorrection.detect(expected, recognizes: dictionary.recognizes,
-                            recognizesFragment: dictionary.recognizesCommon, convert: convert) == nil,
+                            recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert) == nil,
                                "correct wrapped word preserved \(englishID)/\(russianID) \(expected)")
                     }
                 }

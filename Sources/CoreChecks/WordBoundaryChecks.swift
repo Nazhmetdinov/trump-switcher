@@ -21,7 +21,7 @@ func wordBoundaryChecks(dictionary: LocalDictionary) -> Int {
         }
         func detect(_ input: String) -> AutoCorrection? {
             AutoCorrection.detect(input, recognizes: dictionary.recognizes,
-                                  recognizesFragment: dictionary.recognizesCommon, convert: convert)
+                                  recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert)
         }
         func type(_ intended: String, initial: Layout) -> String {
             var active = initial == .english ? english : russian

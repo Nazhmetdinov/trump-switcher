@@ -95,7 +95,7 @@ public final class LocalDictionary {
         if layout == .russian && normalized.count < 5 { return false }
         let supplementary = layout == .russian ? russianModern : englishBritish
         let shape = layout == .russian ? russianShape : englishShape
-        return shape.permits(normalized) && supplementary?.recognizes(normalized) == true
+        return (shape.permits(normalized) || shape.permitsBackoff(normalized)) && supplementary?.recognizes(normalized) == true
     }
 
     /// Stronger evidence for a fragment obtained by stripping a potential б/ю/ж.
@@ -113,6 +113,18 @@ public final class LocalDictionary {
         // real English words. Product/person names have an explicit lexicon.
         if (layout == .russian ? russian : english)?.recognizes(normalized) == true { return true }
         return system?.recognizes(normalized, layout) == true
+    }
+
+    /// Identify only the newly admitted backoff tier. Existing strict/common
+    /// words keep their established punctuation policy. This tier may veto an
+    /// ambiguous split, but never authorize a partial-word correction.
+    public func recognizesBackoff(_ word: String, _ layout: Layout) -> Bool {
+        guard (8...48).contains(word.count), word.allSatisfy(\.isLetter) else { return false }
+        let normalized = word.precomposedStringWithCanonicalMapping.lowercased()
+        let shape = layout == .russian ? russianShape : englishShape
+        guard !shape.permits(normalized), shape.permitsBackoff(normalized),
+              !recognizesCommon(normalized, layout) else { return false }
+        return (layout == .russian ? russianModern : englishBritish)?.recognizes(normalized) == true
     }
 
     private func recognizesCompound(_ word: String, _ layout: Layout) -> Bool {

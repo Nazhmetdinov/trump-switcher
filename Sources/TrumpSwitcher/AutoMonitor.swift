@@ -169,7 +169,7 @@ final class AutoMonitor {
     private let keyboard = KeyboardLayouts()
     private var compiledExclusions = CompiledExclusions([])
     var settings = CorrectionSettings() {
-        didSet { compiledExclusions = CompiledExclusions(settings.excludedWords); cancel() }
+        didSet { compiledExclusions = CompiledExclusions(settings.excludedWords, rules: settings.wordExclusionRules ?? []); cancel() }
     }
     private static let ownEvent: Int64 = 0x5452554d505357
     // Native input-context/cursor UI can temporarily stall an editor for about
@@ -505,7 +505,7 @@ final class AutoMonitor {
                                      token: buffer.token, mappedToken: currentTable.convert(buffer.token, to: $0))
         }} ?? false
         func detect(_ token: String, otherTable: KeyboardLayoutTable?) -> AutoCorrection? {
-            AutoCorrection.detect(token, recognizes: dictionary.recognizes, recognizesFragment: dictionary.recognizesCommon,
+            AutoCorrection.detect(token, recognizes: dictionary.recognizes, recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff,
                 isAddress: addresses.recognizes, settings: settings, establishedLanguage: typingLanguage,
                 exclusions: compiledExclusions, convert: { value, target in
                     guard let to = target == currentLayout ? currentTable : otherTable else { return value }

@@ -21,7 +21,7 @@ assert info["CFBundleIdentifier"] == "local.trumpswitcher.mac"
 assert info["CFBundleExecutable"] == "TrumpSwitcher"
 assert info["LSMinimumSystemVersion"] == "13.0"
 assert info["LSUIElement"] is True, "The app must run from the menu bar without a Dock icon"
-assert info["CFBundleShortVersionString"] == "0.6.47" and info["CFBundleVersion"] == "86"
+assert info["CFBundleShortVersionString"] == "0.6.48" and info["CFBundleVersion"] == "87"
 binary = app / "Contents/MacOS/TrumpSwitcher"
 assert sorted(p.name for p in binary.parent.iterdir()) == ["TrumpSwitcher"]
 subprocess.run(["/usr/bin/codesign", "--verify", "--strict", str(app)], check=True)

@@ -1,5 +1,13 @@
 # История изменений / Changelog
 
+## 0.6.48 · build 87 · 2026-10-23
+
+- Расширено распознавание редких слов из уже поставляемых словарей: ограниченный анализ сочетаний букв допускает дополнительную проверку Hunspell, но сам по себе не разрешает замену.
+- Добавлена защита от потери букв при конкуренции полного редкого слова с вариантом, содержащим пунктуацию, в том числе при смешанном вводе.
+- В разделе «Не менять» появились условия «Начинается с» и «Содержит». Старые точные исключения и пользовательские настройки сохраняются; правила применяются к исходному слову и результату.
+- Правила компилируются при изменении настроек, чтобы не перебирать весь список при вводе. Нет обучения на набираемом тексте или его сохранения.
+- 377 475 проверок ядра; отдельные проверки настроек, миграции и обеих архитектур. Проверки в сторонних приложениях и установка на пользовательский Mac не выполнялись.
+
 ## 0.6.47 · build 86 · 2026-10-23
 
 - Расширены проверяемые локальные списки: русские имена, отчества и фамилии с явными падежами, английские имена и фамилии, бренды, ИТ-лексика и разговорные формы. Новые записи не разрешают произвольные окончания или замену уже правильных слов.
@@ -109,6 +117,14 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.48 · build 87 · 2026-10-23
+
+- Expanded rare-word recognition from the existing bundled dictionaries: bounded letter-pattern backoff permits an additional Hunspell lookup, never a replacement on its own.
+- Protected complete rare words against competing punctuation interpretations that would lose letters, including mixed-script input.
+- Added “Starts with” and “Contains” conditions in «Не менять». Existing exact exclusions and user settings are retained; rules cover both the original word and the selected result.
+- Rules are compiled when settings change instead of scanning the full list during input. No learning from typed text or typing history.
+- 377,475 core assertions plus settings, migration and architecture checks. No third-party application tests or installation on the user's Mac.
 
 ## 0.6.47 · build 86 · 2026-10-23
 

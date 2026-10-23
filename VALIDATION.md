@@ -1,5 +1,96 @@
 # Trump Switcher verification
 
+## 0.6.48 · build 87 release verification — 2026-10-23
+
+The two development stages below are included together in this release.
+A fresh native release bundle passed **377,475 core assertions**, **240 native
+keyboard-event checks**, **182 in-process editor checks**, **717 application
+configuration checks**, queue/punctuation models and **8 installer rollback tests**.
+Packaged resources, licenses, version/build, deployment target and ad-hoc signature
+were verified. The Intel bundle was cross-compiled and its x86_64 architecture and
+signature verified; Intel runtime requires target hardware and was not exercised.
+No installation, permission changes, live input injection or third-party editor
+testing was performed. Detailed earlier frequency-audit results remain below.
+Local logs: `Build/release48-build.log`, `Build/release48-intel.log`.
+
+
+## Second Punto report: patterned exclusions — development, 2026-10-23
+
+Added explicit exact/prefix/substring exclusion modes to the existing settings
+form. Existing exact strings retain literal semantics, including `*` and `?`.
+The optional `wordExclusionRules` field decodes absent legacy data as nil; valid
+rules survive persistence, export/import and recommended-mode reset. Rules are
+bounded to 500 entries and 128 UTF-16 units each; partial patterns need at least
+two characters. Invalid types, duplicate normalized conditions and invalid text
+are rejected without committing settings.
+
+The runtime monitor compiles rules only when settings change. Exact rules use
+a set, prefix matching follows anchored trie edges, and substring matching uses
+Aho–Corasick failure links. Matching never learns from typed text. Both the source
+and the selected correction remain subject to exclusions; no exclusion can turn
+an ambiguous alternative into an authorized replacement.
+
+**377,475 CoreChecks passed**, including **19,725 new pattern assertions**. An
+independent naive matcher is compared against the automaton over every a/b/c
+string of length 0–7 with six overlapping/anchored rule sets. Additional checks
+cover Unicode normalization, case, hyphens, literal metacharacters, inherited
+suffix matches, empty/invalid/maximum settings, legacy JSON, two conversion
+directions, punctuation, explicit replacement priority and ambiguity retention.
+
+**713 application-configuration checks passed** with isolated disposable settings
+and an invisible own window: prefix/contains form submission, duplicate rejection,
+failed-save recovery, deletion, import/export and reset retention. No external UI
+was read and no keyboard events were posted. Native arm64 and x86_64 cross-builds
+succeeded; Intel runtime remains untested. Logs: `Build/punto2-core.log`,
+`Build/punto2-settings.log`, `Build/punto2-build.log`, `Build/punto2-intel.log`.
+
+No new dictionary decisions or unconditional switching heuristics were introduced
+in this second step; the full frequency audit from the previous section was not
+repeated. Application installation and GitHub release publication were not part
+of this change. The [assessment](Tests/PUNTO-MECHANISMS.md) records what was adopted
+and the unverified/Windows-specific claims that were not treated as specifications.
+
+## Punto report adaptation — development changes, 2026-10-23
+
+See [the mechanism-by-mechanism assessment](Tests/PUNTO-MECHANISMS.md).
+This is an independent implementation from the packaged data, not imported
+Punto code or a claim that its undocumented internals match the supplied report.
+
+Added bounded trigram-to-bigram backoff, with independent-word support counts
+and mandatory supplementary Hunspell acceptance. The existing strict path and
+common-fragment recognizer are unchanged. A separate backoff evidence callback
+protects newly admitted rare words from destructive punctuation splitting,
+including mixed-script tokens; existing strict lexical rules retain priority.
+Per-decision evidence caches expire with the decision, without input history.
+
+**357,750 CoreChecks passed**, including **12,619 new backoff checks**. The tests
+enumerate the supplementary sources to identify 21,981 Russian and 1,193 English
+additional lowercase base spellings admitted by the backoff tier; these already
+exist in the shipped dictionaries, and are not new externally imported entries.
+An evenly distributed deterministic sample of 150 spellings per language checks
+both conversion directions on all three Russian maps: correct-source retention,
+whole-word results, mixed letters, four punctuation wrappers/endings, exclusions
+and disabled directions. Synthetic training data additionally checks unsupported
+pairs, multiple unseen triples, short/oversized tokens and independent support.
+
+The final 80,000-entry frequency audit (one rejected upstream noise entry)
+reports **zero wrong replacements and zero changes to accepted correct words**
+on all three maps. Mac/PC results are identical to 0.6.47: RU 49,544 exact, 50
+collisions, 405 preserved/ambiguous; EN 29,925 exact, 75 collisions. Phonetic RU
+remains 47,759 exact, 2,121 collisions, 119 preserved/ambiguous. Phonetic EN has
+25,659 exact and 4,341 collisions: 12 additional genuine source-word collisions
+are deliberately preserved rather than overriding newly recognized Russian words.
+
+Warm local recognition measured 800 decisions in 15 ms total on this host;
+this is not a third-party editor latency measurement. Release-mode application
+compilation succeeded for native arm64 and cross-compiled x86_64 using SDK 26.5.
+Intel execution was not tested. Logs: `Build/punto-core-checks.log`,
+`Build/punto-vocabulary.json`, `Build/punto-final-build.log`,
+`Build/punto-app-intel.log` (ignored local artifacts).
+
+No application installation, live keyboard injection, third-party editor tests,
+permission changes or GitHub release publication were performed for this change.
+
 ## 0.6.47 vocabulary and startup recovery — 2026-10-23
 
 The enumerable, locally authored extension contains **1,903 distinct spellings**:

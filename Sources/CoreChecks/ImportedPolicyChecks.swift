@@ -17,7 +17,7 @@ func importedPolicyChecks(dictionary: LocalDictionary) -> Int {
         }
         func detected(_ input: String, _ settings: CorrectionSettings = CorrectionSettings()) -> AutoCorrection? {
             AutoCorrection.detect(input, recognizes: dictionary.recognizes,
-                recognizesFragment: dictionary.recognizesCommon, settings: settings, convert: convert)
+                recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, settings: settings, convert: convert)
         }
         for (token, word) in [("vs", "мы"), ("dj", "во"), ("kb", "ли"), ("jr", "ок"),
                               ("bp", "из"), ("ye", "ну"), ("ds", "вы")] {

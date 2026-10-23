@@ -58,6 +58,7 @@ count += manualConversionGateChecks()
 count += inputSourceRollbackChecks()
 count += layoutCoverageChecks()
 count += editorCapitalizationChecks()
+count += patternExclusionChecks()
 func check(_ condition: @autoclosure () -> Bool, _ name: String) {
     guard condition() else { fatalError("FAILED: \(name)") }
     count += 1
@@ -179,6 +180,7 @@ let bundled = LocalDictionary(includeSystem: false, directory: resourceOverride)
 count += importedPolicyChecks(dictionary: bundled)
 count += release46Checks(dictionary: bundled)
 count += reviewedVocabularyChecks(dictionary: bundled)
+count += ngramBackoffChecks(dictionary: bundled)
 count += compoundDictionaryChecks(dictionary: bundled)
 count += lexicalPunctuationChecks(dictionary: bundled)
 count += reliabilityChecks(dictionary: bundled)
@@ -189,22 +191,22 @@ check(bundled.bundledAvailable, "both packaged Hunspell dictionaries loaded")
 check(bundled.frequencyCounts.russian == 50000 && bundled.frequencyCounts.english == 30000, "complete frequency packs loaded")
 count += supplementalVocabularyChecks(dictionary: bundled)
 for (input, expected) in shortPairs + [("nfrbt", "такие"), ("Nfrbt", "Такие"), ("hf,jnftn", "работает"), ("ghbdtn", "привет"), ("руддщ", "hello"), ("yt!", "не!")] {
-    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon)?.text == expected, "bundled user example: " + input)
+    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff)?.text == expected, "bundled user example: " + input)
 }
 for word in ["клавиатурами", "срабатывают", "переключение", "словарями", "приложениях", "исправляет", "работают", "русской", "английской", "наверняка", "безопасный", "проверка"] {
     check(bundled.recognizes(word, .russian), "Russian word forms: " + word)
     let mistyped = Conversion.convert(word, to: .english)
-    check(AutoCorrection.detect(mistyped, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon)?.text == word, "Russian inflected conversion: " + word)
-    check(AutoCorrection.detect(word, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon) == nil, "correct Russian preserved: " + word)
+    check(AutoCorrection.detect(mistyped, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff)?.text == word, "Russian inflected conversion: " + word)
+    check(AutoCorrection.detect(word, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff) == nil, "correct Russian preserved: " + word)
 }
 for word in ["hello", "keyboard", "dictionaries", "switching", "working", "applications", "safely", "thanks", "please", "messages", "testing", "corrected"] {
     check(bundled.recognizes(word, .english), "English word forms: " + word)
     let mistyped = Conversion.convert(word, to: .russian)
-    check(AutoCorrection.detect(mistyped, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon)?.text == word, "English inflected conversion: " + word)
-    check(AutoCorrection.detect(word, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon) == nil, "correct English preserved: " + word)
+    check(AutoCorrection.detect(mistyped, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff)?.text == word, "English inflected conversion: " + word)
+    check(AutoCorrection.detect(word, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff) == nil, "correct English preserved: " + word)
 }
 for input in ["a", "I", "to", "on", "in", "не", "на", "а", "я", "и", "такие", "hello", "test", "руддщ123", "GHBDTN", "ghbDtn", "user@test", "ghbdtn_test"] {
-    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon) == nil, "bundled preservation/rejection: " + input)
+    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff) == nil, "bundled preservation/rejection: " + input)
 }
 check(!bundled.recognizes("hello\u{0}ignored", .english), "NUL cannot truncate C string")
 check(!bundled.recognizes("hello world", .english), "dictionary rejects phrases")
@@ -212,13 +214,13 @@ check(!LocalDictionary(includeSystem: false, directory: URL(fileURLWithPath: "/n
 // Address syntax is independent of spelling and offline.
 let addresses = AddressRecognizer(directory: bundled.resourceDirectory)
 check(addresses.available && addresses.zoneCount > 1000, "IANA zones bundled and loaded")
-check(AutoCorrection.detect("нфтвучюкг", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, isAddress: addresses.recognizes)?.text == "yandex.ru", "exact user domain example")
+check(AutoCorrection.detect("нфтвучюкг", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, isAddress: addresses.recognizes)?.text == "yandex.ru", "exact user domain example")
 let addressSamples = ["yandex.ru", "google.com", "www.yandex.ru", "mail.google.com", "github.io", "example.co.uk", "my-site123.dev", "EXAMPLE.RU", "xn--e1afmkfd.xn--p1ai", "https://yandex.ru", "https://example.com/a/../b", "ftp://example.org/file", "http://localhost:8080", "127.0.0.1", "http://127.0.0.1:8080/test", "example.ru:443/path", "https://example.com/search?q=123&x=test#top", "https://example.com/a%20b", "name.surname+tag@example.org", "user123@mail.example.ru", "mailto:user@example.com"]
 for expected in addressSamples {
     check(addresses.recognizes(expected), "valid offline address syntax: " + expected)
-    check(AutoCorrection.detect(expected, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, isAddress: addresses.recognizes) == nil, "correct ASCII address preserved: " + expected)
+    check(AutoCorrection.detect(expected, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, isAddress: addresses.recognizes) == nil, "correct ASCII address preserved: " + expected)
     let wrong = Conversion.convert(expected, to: .russian)
-    let correction = AutoCorrection.detect(wrong, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, isAddress: addresses.recognizes)
+    let correction = AutoCorrection.detect(wrong, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, isAddress: addresses.recognizes)
     check(correction?.text == expected && correction?.layout == .english, "wrong-layout address: " + expected)
     var typed = TypingBuffer()
     for char in wrong { typed.append(String(char)) }
@@ -233,12 +235,12 @@ for invalid in ["hello", "user@test", "a..b@example.com", "@example.com", "a@b@c
     check(!addresses.recognizes(invalid), "invalid addresses remain untouched: " + invalid)
 }
 for original in ["пример.рф", "мой-сайт.рус", "пример.com", "hello", "привет", "руддщ123", "ghbdtn_test", "user@test"] {
-    check(AutoCorrection.detect(original, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, isAddress: addresses.recognizes) == nil, "real Cyrillic domains and non-addresses preserved: " + original)
+    check(AutoCorrection.detect(original, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, isAddress: addresses.recognizes) == nil, "real Cyrillic domains and non-addresses preserved: " + original)
 }
 let longURL = "https://example.com/" + String(repeating: "a", count: 65)
 check(addresses.recognizes(longURL), "address over old 48-character word limit accepted")
 let wrongLongURL = Conversion.convert(longURL, to: .russian)
-check(AutoCorrection.detect(wrongLongURL, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, isAddress: addresses.recognizes)?.text == longURL, "long URL converted in full")
+check(AutoCorrection.detect(wrongLongURL, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, isAddress: addresses.recognizes)?.text == longURL, "long URL converted in full")
 check(AutoCorrection.detect(String(repeating: "a", count: 49), recognizes: { _, _ in true }) == nil, "ordinary spelling limit remains 48")
 check(!addresses.recognizes("https://example.com/" + String(repeating: "a", count: 128)), "overlong URL refused without truncation")
 check(!AddressRecognizer(directory: URL(fileURLWithPath: "/missing-address-resources")).available, "missing zone file fails closed")
@@ -262,18 +264,18 @@ for input in ["hello1", "ghbdtn_test", "user@test", "ghbdtn-test", "🙂", "past
     typing.reset()
     for char in input { typing.append(String(char)) }
     let completed = typing.finishWord()
-    check(completed == nil || AutoCorrection.detect(completed!, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon) == nil,
+    check(completed == nil || AutoCorrection.detect(completed!, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff) == nil,
           "unsafe or non-address token does not convert: " + input.prefix(12))
 }
 for char in "hello/world" { typing.append(String(char)) }
-check(typing.finishWord().flatMap { AutoCorrection.detect($0, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon) } == nil, "paths cannot trigger keyboard replacement")
+check(typing.finishWord().flatMap { AutoCorrection.detect($0, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff) } == nil, "paths cannot trigger keyboard replacement")
 typing.append("ghbdtn")
 check(typing.finishWord() == nil, "multi-character events are not counted as individual keystrokes")
 for (input, expected) in shortPairs + [("hf,jnftn", "работает"), ("руддщ", "hello"), ("Ghbdtn", "Привет"), ("yt!", "не!")] {
     typing.reset()
     for char in input { typing.append(String(char)) }
     let token = typing.finishWord()!
-    let correction = AutoCorrection.detect(token, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon)!
+    let correction = AutoCorrection.detect(token, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff)!
     let keys = KeyboardReplacement.keys(original: token, corrected: correction.text, layout: correction.layout)!
     check(keys.prefix(input.count).allSatisfy { $0.code == 51 && $0.text == nil && !$0.shift }, "delete exact typed characters")
     check(keys.compactMap(\.text).joined() == expected + " ", "replacement and exactly one space: " + input)
@@ -339,20 +341,20 @@ for (input, output) in [("lkz", "для"), ("b", "и"), ("d", "в"), ("r", "к")
                          ("(ghbdtn)", "(привет)"), ("«ghbdtn»", "«привет»"),
                          ("ghbdtn,b", "привет,и"), ("b.d", "и.в"), ("rfr-nj", "как-то"),
                          ("bp-pf", "из-за"), ("руддщю", "hello."), ("руддщююю", "hello...")] {
-    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon)?.text == output, "expanded correction: " + input)
+    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff)?.text == output, "expanded correction: " + input)
 }
 for input in ["hello,world", "и,в", "из-за", "как-то", "hello.world", "yandex.ru.", "(yandex.ru)", "ghbdtn_test", "ghbdtn123"] {
-    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon) == nil, "expanded preservation: " + input)
+    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff) == nil, "expanded preservation: " + input)
 }
 for wrapper in [("(", ")"), ("[", "]"), ("{", "}"), ("«", "»"), ("“", "”"), ("‘", "’"), ("\"", "\"")] {
     for (input, output) in [("lkz", "для"), ("b", "и"), ("d", "в"), ("ghbdtn", "привет"), ("руддщ", "hello")] {
         for suffix in ["", ".", ",", "!", "?", "…", "...", "?!"] {
             let token = wrapper.0 + input + wrapper.1 + suffix
-            check(AutoCorrection.detect(token, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon)?.text == wrapper.0 + output + wrapper.1 + suffix, "wrapped short/long punctuation: " + token)
+            check(AutoCorrection.detect(token, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff)?.text == wrapper.0 + output + wrapper.1 + suffix, "wrapped short/long punctuation: " + token)
         }
     }
 }
-check(AutoCorrection.detect("вщтэе", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon)?.text == "don't", "English apostrophe contraction")
+check(AutoCorrection.detect("вщтэе", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff)?.text == "don't", "English apostrophe contraction")
 
 let macTable = KeyboardLayoutTable(id: "com.apple.keylayout.Russian")!
 check(macTable.character(code: 49, shift: false, capsLock: false) == " ", "normal physical Space")
@@ -361,22 +363,22 @@ check(macTable.replacement("\u{00a0}")?.code == 49 && macTable.replacement("\u{0
 var policy = CorrectionSettings()
 policy.excludedWords = ["ghbdtn"]
 policy.rules = [CorrectionRule(input: "ghbdtn", output: "тест", russian: true), CorrectionRule(input: "hello", output: "привет", russian: true)]
-check(AutoCorrection.detect("ghbdtn", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, settings: policy) == nil, "exclusion wins over rule")
-check(AutoCorrection.detect("(ghbdtn),", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, settings: policy) == nil, "excluded stem with wrapper")
-check(AutoCorrection.detect("hello", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, settings: policy)?.text == "привет", "explicit rule overrides known source word")
-check(AutoCorrection.detect("(hello)!", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, settings: policy)?.text == "(привет)!", "rule inside wrappers")
-check(AutoCorrection.detect("(hello)!", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, settings: policy)?.preservesExactCase == true, "explicit rule retains exact output capitalization inside wrappers")
-check(AutoCorrection.detect("ghbdtn", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon)?.preservesExactCase == false, "dictionary correction can preserve editor capitalization")
+check(AutoCorrection.detect("ghbdtn", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, settings: policy) == nil, "exclusion wins over rule")
+check(AutoCorrection.detect("(ghbdtn),", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, settings: policy) == nil, "excluded stem with wrapper")
+check(AutoCorrection.detect("hello", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, settings: policy)?.text == "привет", "explicit rule overrides known source word")
+check(AutoCorrection.detect("(hello)!", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, settings: policy)?.text == "(привет)!", "rule inside wrappers")
+check(AutoCorrection.detect("(hello)!", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, settings: policy)?.preservesExactCase == true, "explicit rule retains exact output capitalization inside wrappers")
+check(AutoCorrection.detect("ghbdtn", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff)?.preservesExactCase == false, "dictionary correction can preserve editor capitalization")
 policy.toRussian = false
-check(AutoCorrection.detect("hello", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, settings: policy) == nil, "disabled direction includes rules")
+check(AutoCorrection.detect("hello", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, settings: policy) == nil, "disabled direction includes rules")
 policy = CorrectionSettings(); policy.shortWords = false
-check(AutoCorrection.detect("b", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, settings: policy) == nil, "short word policy")
+check(AutoCorrection.detect("b", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, settings: policy) == nil, "short word policy")
 policy = CorrectionSettings(); policy.punctuation = false
-check(AutoCorrection.detect("(ghbdtn)", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, settings: policy) == nil, "punctuation policy")
+check(AutoCorrection.detect("(ghbdtn)", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, settings: policy) == nil, "punctuation policy")
 policy = CorrectionSettings(); policy.addresses = false
-check(AutoCorrection.detect("нфтвучюкг", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, settings: policy) == nil, "address policy")
+check(AutoCorrection.detect("нфтвучюкг", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, settings: policy) == nil, "address policy")
 policy = CorrectionSettings(); policy.allowAllCaps = true
-check(AutoCorrection.detect("GHBDTN", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, settings: policy)?.text == "ПРИВЕТ", "optional capitals policy")
+check(AutoCorrection.detect("GHBDTN", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, settings: policy)?.text == "ПРИВЕТ", "optional capitals policy")
 policy.rules = [CorrectionRule(input: "tt", output: "тест текста", russian: true)]
 check(CorrectionSettings.decode(try! JSONEncoder().encode(policy)) == policy, "settings round trip")
 policy.rules.append(CorrectionRule(input: "bad", output: "text\n", russian: false))
@@ -403,7 +405,7 @@ for id in InputSources.russianIDs {
         let to = direction == .english ? table : englishTable
         let wrong = from.convert(expected, to: to)
         let target = direction == .english ? Layout.english : .russian
-        let correction = AutoCorrection.detect(wrong, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, convert: { text, layout in
+        let correction = AutoCorrection.detect(wrong, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, convert: { text, layout in
             layout == .russian ? englishTable.convert(text, to: table) : table.convert(text, to: englishTable)
         })
         // Genuine Latin words in a phonetic layout can be ambiguous. They are
@@ -442,29 +444,29 @@ for (target, samples) in [(Layout.russian, ["яндекс", "Яндекс", "Я�
         // Mixed capitals are intentional product names: explicit CAPS policy only
         // permits all-caps, so camel-case product spellings stay conservative.
         do {
-            let detected = AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, convert: { text, _ in to.convert(text, to: from) })
+            let detected = AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, convert: { text, _ in to.convert(text, to: from) })
             check(detected?.text == expected, "common proper name correction: " + expected)
         }
         check(bundled.recognizes(expected, target), "proper name and inflection included locally: " + expected)
-        check(AutoCorrection.detect(expected, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon) == nil, "correct proper name preserved: " + expected)
+        check(AutoCorrection.detect(expected, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff) == nil, "correct proper name preserved: " + expected)
     }
 }
 for (input, expected) in [("Янlеrc", "Яндекс"), ("приdtт", "привет"), ("руllo", "hello"), ("(приdtт)", "(привет)")] {
-    let detected = AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon,
+    let detected = AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff,
         convert: { text, target in target == .russian ? abcTable.convert(text, to: macTable) : macTable.convert(text, to: abcTable) })
     check(detected?.text == expected, "complete mixed-script word recovered: " + input)
 }
 for input in ["helloпривет", "abcИгорь", "foo_приdtт", "приdtт123", "янdex.ru", "idСodex"] {
-    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon,
+    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff,
         convert: { text, target in target == .russian ? abcTable.convert(text, to: macTable) : macTable.convert(text, to: abcTable) }) == nil,
           "mixed identifiers/addresses/unknown words preserved: " + input)
 }
 var noMixedPunctuation = CorrectionSettings(); noMixedPunctuation.punctuation = false
-check(AutoCorrection.detect("(приdtт)", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, settings: noMixedPunctuation,
+check(AutoCorrection.detect("(приdtт)", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, settings: noMixedPunctuation,
     convert: { text, target in target == .russian ? abcTable.convert(text, to: macTable) : macTable.convert(text, to: abcTable) }) == nil,
     "mixed wrapped word respects punctuation setting")
 var mixedPolicy = CorrectionSettings(); mixedPolicy.excludedWords = ["приdtт"]
-check(AutoCorrection.detect("приdtт", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, settings: mixedPolicy) == nil, "mixed word respects exclusion")
+check(AutoCorrection.detect("приdtт", recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, settings: mixedPolicy) == nil, "mixed word respects exclusion")
 for (transition, typed, expected) in [(queuedRU, "ghbdtn", "привет"), (queuedEN, "руддщ", "hello")] {
     var stream = TypingBuffer(); var result = ""
     for (index, char) in typed.enumerated() {
@@ -509,20 +511,20 @@ for (target, words) in [(Layout.russian, ["привет", "для", "и", "в", 
                                  ("", "..."), ("", "?!"), ("\"", "\""), ("(", ")"), ("", "—"), ("", "–")] {
             let expected = prefix + word + suffix
             let input = correct.convert(expected, to: wrong)
-            let result = AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, convert: macConvert)
+            let result = AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, convert: macConvert)
             check(result?.text == expected, "Mac physical punctuation regression: " + input + " → " + expected)
-            check(AutoCorrection.detect(expected, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, convert: macConvert) == nil,
+            check(AutoCorrection.detect(expected, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, convert: macConvert) == nil,
                   "correct punctuation preserved: " + expected)
         }
     }
 }
 for word in "срабатывает через раз вообще работает непонятно как это функционирует почему таких проблем нет Яндекс заимствуй также нужно учитывать знаки препинания которые могут быть конце слов исправь навсегда".split(separator: " ").map(String.init) {
     let input = macTable.convert(word, to: abcTable)
-    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, convert: macConvert)?.text == word,
+    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, convert: macConvert)?.text == word,
           "ordinary vocabulary from reported scenario: " + word)
 }
 for input in ["user@example.com", "foo_bar", "hello/world", "ghbdtn_test", "API", "hello", "(hello)!", "print(hello)"] {
-    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, convert: macConvert) == nil,
+    check(AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, convert: macConvert) == nil,
           "symbols do not authorize code/identifier changes: " + input)
 }
 check(TypingShortcut.action(code: 49, command: false, control: true, option: false, shift: false) == .inputSource,
@@ -549,7 +551,7 @@ for deleteFirst in [false, true] {
 for character in "при" { shortcutBuffer.append(String(character)) }
 TypingShortcut.inputSource.apply(to: &shortcutBuffer)
 for character in "dtn" { shortcutBuffer.append(String(character)) }
-check(shortcutBuffer.finishWord().flatMap { AutoCorrection.detect($0, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, convert: macConvert) }?.text == "привет",
+check(shortcutBuffer.finishWord().flatMap { AutoCorrection.detect($0, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, convert: macConvert) }?.text == "привет",
       "manual layout switch inside word retains enough text to recover mixed alphabet")
 for (symbol, mapped, immediate) in [("!", "!", true), ("&", ".", true), ("^", ":", true), ("…", "…", true),
                                     (",", "б", false), (".", "ю", false), (";", "ж", false), ("'", "э", false)] {
@@ -579,7 +581,7 @@ for (target, phrases) in [(Layout.russian, ["привет! для, и в. Янд
                                                         mappedToken: active.convert(stream.token, to: other))
             if typed == " " || punctuation {
                 if let original = stream.finishWord(),
-                   let correction = AutoCorrection.detect(original + (punctuation ? typed : ""), recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, convert: macConvert) {
+                   let correction = AutoCorrection.detect(original + (punctuation ? typed : ""), recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff, convert: macConvert) {
                     active = correction.layout == .russian ? macTable : abcTable
                     let plan = KeyboardReplacement.keys(original: original, corrected: correction.text, layout: correction.layout,
                                                         appendSpace: typed == " ", keyProvider: { text, _ in active.replacement(text) })!
@@ -597,7 +599,7 @@ for (target, phrases) in [(Layout.russian, ["привет! для, и в. Янд
 let benchmarkStart = Date()
 for _ in 0..<100 {
     for input in ["b", "нфтвучюкг", "руддщ", "hf,jnftn", "hello", "такие", "dictionary", "abcdefghijklmnp"] {
-        _ = AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon)
+        _ = AutoCorrection.detect(input, recognizes: bundled.recognizes, recognizesFragment: bundled.recognizesCommon, recognizesBackoff: bundled.recognizesBackoff)
     }
 }
 let elapsedMS = Date().timeIntervalSince(benchmarkStart) * 1000

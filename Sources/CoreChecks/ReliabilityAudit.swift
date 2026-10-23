@@ -27,13 +27,13 @@ func runReliabilityAudit() throws {
             let started = ProcessInfo.processInfo.systemUptime
             for word in words {
                 let wrong = target == .russian ? ru.convert(word, to: en) : en.convert(word, to: ru)
-                let output = AutoCorrection.detect(wrong, recognizes: dictionary.recognizes, recognizesFragment: dictionary.recognizesCommon, convert: convert)?.text
+                let output = AutoCorrection.detect(wrong, recognizes: dictionary.recognizes, recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert)?.text
                 if output == word { exact += 1 }
                 else if wrong == word { preserved += 1 }
                 else if output == nil && dictionary.recognizes(wrong, target == .russian ? .english : .russian) { collision += 1; sample("collisions", word + " / " + wrong) }
                 else if output == nil { missed += 1; sample("missed", word + " / " + wrong) }
                 else { incorrect += 1; sample("incorrect", word + " / " + wrong + " → " + output!) }
-                if let output = AutoCorrection.detect(word, recognizes: dictionary.recognizes, recognizesFragment: dictionary.recognizesCommon, convert: convert)?.text {
+                if let output = AutoCorrection.detect(word, recognizes: dictionary.recognizes, recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, convert: convert)?.text {
                     changedValid += 1; sample("changedValid", word + " → " + output)
                 }
             }
