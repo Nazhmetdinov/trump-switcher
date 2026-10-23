@@ -99,6 +99,17 @@ public struct AutoCorrection {
             }
         }
         let matchingClosers: [Character: Character] = ["(": ")", "[": "]", "{": "}", "'": "'", "\"": "\"", "«": "»", "“": "”", "‘": "’", "„": "“", "‚": "‘"]
+        func permitsLiteralPreference<S: Sequence>(_ values: S) -> Bool where S.Element == String {
+            // A longer literal suffix is not evidence for a shorter word:
+            // dfkthb.! can be валерию! or валери.!. Wrappers do not remove
+            // that ambiguity. Preserve the input if the letter sequences differ.
+            let spellings = Set(values.map { String($0.filter(\.isLetter)) })
+            if spellings.count <= 1 { return true }
+            // Retain the existing, explicit ellipsis convention (three or more
+            // literal periods), including a closing wrapper before the run.
+            let tail = suffix.drop(while: { matchingClosers.values.contains($0) })
+            return tail.count >= 3 && tail.allSatisfy { $0 == "." }
+        }
         for (before, input, after) in variants {
             if let rule = settings.rules.first(where: { $0.valid && $0.input == input }), settings.permits(rule.layout) {
                 return makeResult(before + rule.output + after, rule.layout, exactCase: true)
@@ -195,7 +206,7 @@ public struct AutoCorrection {
                     let capitals = word.filter(\.isLetter)
                     guard !capitals.dropFirst().contains(where: \.isUppercase) ||
                           (settings.allowAllCaps && capitals.allSatisfy(\.isUppercase)) ||
-                          (!capitals.allSatisfy(\.isUppercase) && CommonNames.recognizes(word, destination)) else { continue }
+                          (!capitals.allSatisfy(\.isUppercase) && CommonNames.allowsInternalCapitals(word, destination)) else { continue }
                     let result = before + candidate + after
                     candidates[result] = AutoCorrection(text: result, layout: destination)
                     if before.isEmpty && after.isEmpty && mappedPrefix.isEmpty && mappedSuffix.isEmpty {
@@ -209,6 +220,7 @@ public struct AutoCorrection {
             // Use the same literal-punctuation policy as an unmixed token.
             // A complete competing word or a second destination stays ambiguous.
             if candidates.count > 1, wholeWordCandidates.isEmpty,
+               permitsLiteralPreference(candidates.keys),
                let first = candidates.values.first,
                candidates.values.allSatisfy({ $0.layout == first.layout }),
                let longest = literalCandidates.values.max() {
@@ -248,7 +260,7 @@ public struct AutoCorrection {
             let capitals = word.filter(\.isLetter)
             if capitals.dropFirst().contains(where: \.isUppercase) &&
                 !(settings.allowAllCaps && capitals.count > 1 && capitals.allSatisfy(\.isUppercase)) &&
-                !(!capitals.allSatisfy(\.isUppercase) && CommonNames.recognizes(word, target)) { return false }
+                !(!capitals.allSatisfy(\.isUppercase) && CommonNames.allowsInternalCapitals(word, target)) { return false }
             if word.count <= 2 {
                 guard settings.shortWords, knownShort(word, target) else { return false }
                 if word.count == 1 {
@@ -323,7 +335,7 @@ public struct AutoCorrection {
         // remains ambiguous and is never silently discarded.
         if answers.count > 1, wholeWordAnswers.isEmpty {
             if let wrappedAnswer, answers.contains(wrappedAnswer) { answers = [wrappedAnswer] }
-            else {
+            else if permitsLiteralPreference(answers) {
                 // Filter first: an encoded initial э/х must not let a discarded
                 // literal quote/bracket outrank the remaining full-word answer.
                 let eligible = literalAnswers.filter { answers.contains($0.key) }

@@ -62,6 +62,24 @@ public enum CommonNames {
     pullrequest webhook webhooks autocomplete autocorrect hotkey hotkeys keymap keymaps
     """)
     public static func recognizes(_ word: String, _ layout: Layout) -> Bool {
-        (layout == .russian ? russian : english).contains(word.lowercased())
+        let normalized = word.lowercased()
+        return (layout == .russian ? russian : english).contains(normalized) ||
+            ReviewedVocabulary.recognizesName(normalized, layout)
+    }
+
+    // Membership in a name list alone must not license arbitrary camelCase
+    // identifiers such as jOhN or sVeLtE. Only reviewed brand spellings can
+    // bypass the normal internal-capital guard; title case needs no exception.
+    private static let internalCapitals = words("""
+    iPhone iPad iMac MacBook macOS iOS iCloud AirPods OneDrive FaceTime TouchID FaceID
+    WhatsApp WeChat YouTube TikTok AliExpress PayPal PlayStation JetBrains
+    GitHub GitLab OpenAI ChatGPT DeepSeek Midjourney HuggingFace
+    DevOps PowerShell eBPF SwiftUI AppKit TestFlight PyCharm WebStorm IntelliJ GoLand DataGrip RustRover
+    PostgreSQL Postgres MySQL SQLite MongoDB DuckDB ClickHouse DynamoDB BigQuery OpenSearch
+    FastAPI SQLAlchemy NumPy SciPy PyTorch TensorFlow OpenVPN WireGuard ZeroTier
+    McDonald McKenzie McCarthy McGregor MacDonald O'Connor O'Brien O'Neill D'Angelo
+    """)
+    public static func allowsInternalCapitals(_ word: String, _ layout: Layout) -> Bool {
+        layout == .english && internalCapitals.contains(word) && recognizes(word, layout)
     }
 }

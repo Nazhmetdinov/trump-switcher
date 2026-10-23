@@ -55,6 +55,9 @@ func lexicalPunctuationChecks(dictionary: LocalDictionary) -> Int {
         }
         // A competing complete word still blocks the punctuation preference.
         expect(detect("levf."), nil, id + " дума./думаю remains ambiguous")
+        for input in ["dfkthb.!", "(dfkthb.)", "«dfkthb.»", "dfkthb.?", "dfkthb..!"] {
+            expect(detect(input), nil, id + " punctuation must not truncate Валерию: " + input)
+        }
         var disabled = CorrectionSettings(); disabled.punctuation = false
         expect(detect("('[)", settings: disabled), nil, id + " punctuation setting remains effective")
         expect(detect("rfr-то", settings: disabled), nil, id + " compound punctuation setting remains effective")

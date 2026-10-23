@@ -51,6 +51,7 @@ public enum SupplementalWords {
     """)
 
     public static func recognizes(_ word: String, _ layout: Layout) -> Bool {
-        (layout == .russian ? russian : english).contains(word)
+        (layout == .russian ? russian : english).contains(word) ||
+            ReviewedVocabulary.recognizesColloquial(word, layout)
     }
 }

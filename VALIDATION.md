@@ -1,5 +1,57 @@
 # Trump Switcher verification
 
+## 0.6.47 vocabulary and startup recovery — 2026-10-23
+
+The enumerable, locally authored extension contains **1,903 distinct spellings**:
+1,306 Russian and 597 English names/brands/colloquial forms. Some were already
+recognized by Hunspell; this is the size of the reviewed extension, not a claim
+of 1,903 previously missing words. Russian inflections are explicit spellings.
+The complete corpus is checked through all three Russian layouts paired with
+both ABC and US, with lowercase/title case, nine punctuation wrappers/endings,
+correct-source preservation and target exclusions. Canonical internal capitals
+and apostrophe names have separate assertions; arbitrary camelCase identifiers,
+addresses and intentionally mixed text remain protected.
+
+The expanded check reproduced a real truncated-word decision before the fix:
+`dfkthb.! → валери.!` instead of retaining the competing `валерию!` interpretation.
+Ambiguous non-ellipsis punctuation now cannot select the shorter spelling merely
+because it preserves a longer literal suffix. Matched wrappers and the existing
+three-or-more-literal-period ellipsis convention retain their separate policies.
+The change applies to pure and mixed-script candidates. It does not guess intent
+or turn every skipped candidate into a correction.
+
+**345,131 CoreChecks passed**, including 268,523 complete-extension assertions.
+Mac and PC Russian both corrected 2,586/2,612 bare Russian case variants and all
+1,194 English variants. The remaining Russian variants were left untouched.
+Phonetic Russian corrected 2,390/2,612 Russian and 940/1,194 English variants;
+its larger collision set is expected and is not silently treated as success.
+
+The complete packaged frequency audit found zero incorrect replacements and
+zero changes to accepted source words on all three Russian maps, both directions.
+Mac/PC totals: 49,544 exact RU conversions, 50 source-word collisions, 405 skipped
+or ambiguous; 29,925 exact EN conversions and 75 source-word collisions. Relative
+to 0.6.46, `багаж` becomes ambiguous with the newly reviewed inflection `бага;`;
+that input is preserved rather than selecting a competing spelling. Phonetic
+maps also gain genuine source-word collisions from the expanded names/brands.
+These are coverage limits, not a claim that every word converts automatically.
+
+Native **arm64** release verification passed: 240 self-created keyboard-event
+checks (no posting), 182 windowless NSTextView checks, 704 isolated configuration
+checks, eight installer replacement/rollback tests, offline IPv4/IPv6 TCP/UDP
+denial, strict signature verification, system-only library linkage and all 20
+pinned resource hashes. The release retains the macOS 13.0 minimum and SDK 26.5.
+Enabled-layout notifications refresh the catalog; wake recreates monitoring and
+invalidates pre-sleep context. A missing layout now has its own settings state.
+No input sources, permissions or login items were modified by verification.
+
+No installation or third-party editor access occurred. Intel is cross-compiled
+and package-verified; Intel runtime and other Apple Silicon/macOS combinations
+remain unverified. No local Trump Switcher crash report or open GitHub issue was
+available to establish the reported colleagues' specific Silicon failure.
+Their build/macOS/technical counters are still needed to distinguish permission,
+Secure Input, unsupported layout/field and lexical failures. Unit and bundle
+checks must not be presented as resolution of every such report.
+
 ## 0.6.46 targeted reliability and latency fixes — 2026-10-22
 
 435 new targeted checks cover delayed browser preparation, continued-typing

@@ -248,7 +248,8 @@ enum ApplicationConfigurationChecks {
         expect(store.settings.rules == configured.rules, "rule removal retains unrelated rules")
         let expectedStates: [(SettingsState, String)] = [(.ready,"Готов к работе"),(.disabled,"Автоматическое исправление выключено"),
             (.paused,"Исправления на паузе"),(.needsAccess,"Нужно разрешение macOS"),(.unavailable,"Исправление пока недоступно"),
-            (.noDirection,"Не выбран язык исправления"),(.needsSettingsRecovery,"Не удалось загрузить сохранённые настройки")]
+            (.noDirection,"Не выбран язык исправления"),(.needsLayouts,"Добавьте русскую и английскую раскладки"),
+            (.needsSettingsRecovery,"Не удалось загрузить сохранённые настройки")]
         for (next, text) in expectedStates {
             state = next; controller.synchronize(store.settings)
             expect(views.compactMap { $0 as? NSTextField }.contains { $0.stringValue.contains(text) }, "status reflects actual mode")

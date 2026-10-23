@@ -8,13 +8,13 @@ body:
     id: version
     attributes:
       label: Trump Switcher version / Версия
-      placeholder: "0.6.32 (71)"
+      placeholder: "0.6.47 (86)"
     validations:
       required: true
   - type: input
     id: system
     attributes:
-      label: macOS version and Mac model / macOS и модель Mac
+      label: macOS version and chip (Apple Silicon or Intel) / macOS и процессор (Apple Silicon или Intel)
     validations:
       required: true
   - type: input
@@ -35,3 +35,8 @@ body:
       label: Expected and actual result / Ожидание и результат
     validations:
       required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Technical information / Техническая информация
+      description: "Optional: Settings → Advanced → Help → Technical information. It contains counters, not typed words. Review it before posting. / Необязательно: Настройки → Дополнительно → Помощь → Техническая информация. Там счётчики, а не набранные слова. Проверьте текст перед публикацией."

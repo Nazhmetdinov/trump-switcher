@@ -1,5 +1,14 @@
 # История изменений / Changelog
 
+## 0.6.47 · build 86 · 2026-10-23
+
+- Расширены проверяемые локальные списки: русские имена, отчества и фамилии с явными падежами, английские имена и фамилии, бренды, ИТ-лексика и разговорные формы. Новые записи не разрешают произвольные окончания или замену уже правильных слов.
+- Исправлен выбор усечённого слова перед пунктуацией: например, `dfkthb.!` больше не превращается в `валери.!`. Конкурирующие полные написания остаются без автоматической замены; существующее правило буквального многоточия сохранено.
+- Внутренние заглавные разрешены для проверенных написаний `iPhone`, `GitHub`, `PlayStation`, `McDonald`, `O'Connor` и других. Принадлежность словарю больше не разрешает произвольный регистр вроде `jOhN`.
+- Список источников ввода обновляется при добавлении/удалении раскладок macOS. После пробуждения фильтр пересоздаётся с очисткой старого контекста ввода.
+- Если русская или английская раскладка не добавлена в macOS, вместо ложного «Готов к работе» показывается объяснение и кнопка настроек клавиатуры. Техническая информация дополнена версией macOS и архитектурой сборки.
+- Нативные проверки Apple Silicon и отдельная сборка Intel выполняются без установки и вмешательства в сторонние приложения. Это не подтверждает причину каждого отказа на компьютерах пользователей.
+
 ## 0.6.46 · build 85 · 2026-10-22
 
 - Восстановлены исправления коротких русских слов `bp → из`, `ds → вы`, `kb → ли`, `vs → мы` и других. Прописные сокращения защищены; после известного английского слова короткие английские обозначения сохраняются. Контекст содержит только язык и сбрасывается при смене поля, ручной раскладки или внешнем вводе.
@@ -100,6 +109,15 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.47 · build 86 · 2026-10-23
+
+- Expanded enumerable local lists of Russian names, patronymics and surnames with explicit inflections, English names, brands, technical vocabulary and colloquial spellings. No speculative suffixes or forced conversion of valid source words.
+- Fixed truncated-word selection before punctuation: `dfkthb.!` no longer becomes `валери.!`. Competing complete spellings stay unchanged; the existing literal-ellipsis convention is retained.
+- Reviewed internal-capital spellings such as `iPhone`, `GitHub`, `PlayStation`, `McDonald` and `O'Connor` remain eligible. Name-list membership no longer licenses arbitrary case such as `jOhN`.
+- Refresh enabled layouts when macOS input sources change. Recreate monitoring and clear stale input context after wake.
+- Show a specific missing-layout state with a keyboard-settings action instead of reporting readiness without Russian/English sources. Diagnostics include macOS and build architecture.
+- Native Apple Silicon checks and an Intel cross-build do not install the app or access third-party editors. They do not establish the cause of every reported failure on another Mac.
 
 ## 0.6.46 · build 85 · 2026-10-22
 

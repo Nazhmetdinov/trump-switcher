@@ -178,6 +178,7 @@ let resourceOverride = resourceArgument.flatMap { i in
 let bundled = LocalDictionary(includeSystem: false, directory: resourceOverride)
 count += importedPolicyChecks(dictionary: bundled)
 count += release46Checks(dictionary: bundled)
+count += reviewedVocabularyChecks(dictionary: bundled)
 count += compoundDictionaryChecks(dictionary: bundled)
 count += lexicalPunctuationChecks(dictionary: bundled)
 count += reliabilityChecks(dictionary: bundled)

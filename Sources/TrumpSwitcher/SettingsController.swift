@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 import SwitcherCore
 
 enum SettingsState {
-    case ready, disabled, paused, needsAccess, unavailable, noDirection, needsSettingsRecovery
+    case ready, disabled, paused, needsAccess, needsLayouts, unavailable, noDirection, needsSettingsRecovery
 }
 
 final class SettingsController: NSWindowController, NSTableViewDataSource, NSTableViewDelegate, NSTabViewDelegate {
@@ -387,6 +387,10 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
             stateTitle.stringValue = "Исправление пока недоступно"; stateTitle.textColor = .systemOrange
             stateDetail.stringValue = "Проверьте разрешение macOS. Если оно уже включено, закройте и снова запустите программу. Подсказки есть в разделе помощи."
             stateButton.title = "Открыть помощь"; stateButton.isHidden = false
+        case .needsLayouts:
+            stateTitle.stringValue = "Добавьте русскую и английскую раскладки"; stateTitle.textColor = .systemOrange
+            stateDetail.stringValue = "В macOS → Клавиатура → Ввод текста добавьте «Русская», «Русская — ПК» или «Русская — фонетическая», а также ABC или «США». Переключатель подключится автоматически."
+            stateButton.title = "Открыть настройки клавиатуры…"; stateButton.isHidden = false
         case .noDirection:
             stateTitle.stringValue = "Не выбран язык исправления"; stateTitle.textColor = .systemOrange
             stateDetail.stringValue = "В дополнительных настройках отключены оба языка. Включите хотя бы один или верните обычный режим."
@@ -446,6 +450,10 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
     @objc private func stateAction() {
         switch state() {
         case .needsAccess: permission()
+        case .needsLayouts:
+            if let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") {
+                NSWorkspace.shared.open(url)
+            }
         case .paused: resume(); updateState()
         case .noDirection: tabs.selectTabViewItem(at: 3); advancedTabs.selectTabViewItem(at: 0)
         default: tabs.selectTabViewItem(at: 3); advancedTabs.selectTabViewItem(at: 2)

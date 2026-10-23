@@ -99,10 +99,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         wasTrusted = AXIsProcessTrusted()
         refreshAuto()
+        // Enabling/removing a layout does not necessarily change the selected
+        // source. Refresh even when the user stays on ABC, so a previously
+        // missing Russian destination can become available immediately.
+        DistributedNotificationCenter.default().addObserver(self,
+            selector: #selector(inputSourcesChanged),
+            name: NSNotification.Name(kTISNotifyEnabledKeyboardInputSourcesChanged as String), object: nil)
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(workspaceDidWake),
+            name: NSWorkspace.didWakeNotification, object: nil)
         permissionTimer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             guard let self else { return }
             let trusted = AXIsProcessTrusted()
             if trusted != self.wasTrusted || (trusted && self.autoEnabled && !self.paused && !self.autoMonitor.running) { self.wasTrusted = trusted; self.refreshAuto() }
+        }
+    }
+
+    @objc private func inputSourcesChanged(_ notification: Notification) {
+        // Catalog access and dictionary/event processing stay on main.
+        DispatchQueue.main.async { InputSources.refreshEnabledSources() }
+    }
+
+    @objc private func workspaceDidWake(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in
+            InputSources.refreshEnabledSources()
+            // An enabled port is not proof that pre-sleep focus/queued input
+            // still belongs to the current editor. stop() releases owned keys.
+            self?.refreshAuto()
         }
     }
 
@@ -237,6 +259,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if paused { resultItem.title = "Пауза · исправление отключено" }
         else if !autoEnabled { resultItem.title = "Ручной режим · ⌃⌥Пробел" }
         else if !access.dictionariesAvailable { resultItem.title = "Авто недоступно: нет словарей русского и английского" }
+        else if InputSources.sourceID(for: .russian) == nil || InputSources.sourceID(for: .english) == nil {
+            resultItem.title = "Добавьте русскую и английскую раскладки в macOS → Клавиатура"
+        }
         else if autoMonitor.start() { resultItem.title = "Авто включено · слова и адреса" }
         else { resultItem.title = autoMonitor.lastError }
         updateIcon()
@@ -244,7 +269,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func diagnosticsText() -> String {
-        return "Версия: \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev") · сборка \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "dev")\n\(autoMonitor.boundaryStatus)\nСеть: запрещена macOS · только локальные данные\nРаскладки: \(InputSources.sourceID(for: .russian) ?? "—") / \(InputSources.sourceID(for: .english) ?? "—")\nСловари: \(access.dictionaryStatus)\nДоступ: \(AXIsProcessTrusted() ? "есть" : "НЕТ") · Авто: \(autoMonitor.running ? "подключено" : "выключено") · События: \(autoMonitor.receivedEvents) · Пробелы: \(autoMonitor.receivedSpaces) · Клавиши: \(autoMonitor.receivedKeys)/\(autoMonitor.receivedCharacters)\n\(autoMonitor.contextStatus)\n\(autoMonitor.appStatus)\n\(autoMonitor.typingStatus) · \(autoMonitor.decisionStatus)\nОтправлено замен: \(autoMonitor.automaticCorrections) · \(autoMonitor.lastReplacement) · ожидание решения ≤ \(Int(autoMonitor.longestDecisionMS)) мс\nФильтр: ≤ \(Int(autoMonitor.longestCallbackMS)) мс · прерываний \(autoMonitor.interruptedTaps) · согласовано клавиш \(autoMonitor.reconciledKeys)\nФоновая проверка фокуса: ≤ \(Int(autoMonitor.longestFocusMS)) мс\n\(autoMonitor.reliabilityStatus)\nАктивно: \(NSWorkspace.shared.frontmostApplication?.localizedName ?? "—") · Горячая клавиша: \(hotkeyRegistered ? "зарегистрирована" : "ошибка") · Защищённый ввод: \(IsSecureEventInputEnabled() ? "да" : "нет")\n\(resultItem?.title ?? "")"
+        #if arch(arm64)
+        let architecture = "arm64 · Apple Silicon"
+        #else
+        let architecture = "x86_64 · Intel / Rosetta"
+        #endif
+        return "Система: \(ProcessInfo.processInfo.operatingSystemVersionString) · \(architecture)\nВерсия: \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev") · сборка \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "dev")\n\(autoMonitor.boundaryStatus)\nСеть: запрещена macOS · только локальные данные\nРаскладки: \(InputSources.sourceID(for: .russian) ?? "—") / \(InputSources.sourceID(for: .english) ?? "—")\nСловари: \(access.dictionaryStatus)\nДоступ: \(AXIsProcessTrusted() ? "есть" : "НЕТ") · Авто: \(autoMonitor.running ? "подключено" : "выключено") · События: \(autoMonitor.receivedEvents) · Пробелы: \(autoMonitor.receivedSpaces) · Клавиши: \(autoMonitor.receivedKeys)/\(autoMonitor.receivedCharacters)\n\(autoMonitor.contextStatus)\n\(autoMonitor.appStatus)\n\(autoMonitor.typingStatus) · \(autoMonitor.decisionStatus)\nОтправлено замен: \(autoMonitor.automaticCorrections) · \(autoMonitor.lastReplacement) · ожидание решения ≤ \(Int(autoMonitor.longestDecisionMS)) мс\nФильтр: ≤ \(Int(autoMonitor.longestCallbackMS)) мс · прерываний \(autoMonitor.interruptedTaps) · согласовано клавиш \(autoMonitor.reconciledKeys)\nФоновая проверка фокуса: ≤ \(Int(autoMonitor.longestFocusMS)) мс\n\(autoMonitor.reliabilityStatus)\nАктивно: \(NSWorkspace.shared.frontmostApplication?.localizedName ?? "—") · Горячая клавиша: \(hotkeyRegistered ? "зарегистрирована" : "ошибка") · Защищённый ввод: \(IsSecureEventInputEnabled() ? "да" : "нет")\n\(resultItem?.title ?? "")"
     }
 
     private func settingsState() -> SettingsState {
@@ -253,6 +283,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if paused { return .paused }
         if !AXIsProcessTrusted() { return .needsAccess }
         if !preferences.settings.toRussian && !preferences.settings.toEnglish { return .noDirection }
+        if InputSources.sourceID(for: .russian) == nil || InputSources.sourceID(for: .english) == nil { return .needsLayouts }
         if !access.dictionariesAvailable || !autoMonitor.running { return .unavailable }
         return .ready
     }
@@ -318,6 +349,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         autoMonitor.stop()
         browserAccessibility.stop()
         permissionTimer?.invalidate()
+        DistributedNotificationCenter.default().removeObserver(self)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
         if let hotKey { UnregisterEventHotKey(hotKey) }
         if let handler { RemoveEventHandler(handler) }
     }

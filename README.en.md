@@ -17,12 +17,14 @@ Correction normally runs after Space; Enter and Tab are configurable boundaries.
 
 ## Install
 
-1. Download the DMG for your Mac: [Apple Silicon (M1 or newer)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.46/TrumpSwitcher-0.6.46-build85-AppleSilicon.dmg) or [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.46/TrumpSwitcher-0.6.46-build85-Intel.dmg). Requires **macOS 13+**.
+1. Download the DMG for your Mac: [Apple Silicon (M1 or newer)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.47/TrumpSwitcher-0.6.47-build86-AppleSilicon.dmg) or [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.47/TrumpSwitcher-0.6.47-build86-Intel.dmg). Requires **macOS 13+**.
 2. Open the image and drag **Trump Switcher** onto **Applications**.
 3. Start it from Applications. Its icon appears in the menu bar without opening a window or adding a Dock icon.
 4. Choose **«Разрешения macOS…»** (macOS Permissions) from the menu-bar icon and grant **Accessibility** access. This permits the app to inspect the current word and type its correction. The same menu opens settings and offers optional launch at login.
 
 **First launch requires manual macOS approval.** This build is locally signed but **not Apple-notarized**. If macOS says it cannot verify the app, click **Done**, then open **System Settings → Privacy & Security**. In Security, choose **Open Anyway** specifically for Trump Switcher, then confirm **Open**. This creates a one-time exception for that app copy; do not disable Gatekeeper globally. Once it opens, check that Trump Switcher says it is ready. If Accessibility access is needed, use its permission button and enable Trump Switcher in the macOS list. See [Apple’s instructions](https://support.apple.com/en-us/102445).
+
+Both a supported Russian layout (standard, PC or phonetic) and ABC/US must be enabled in macOS. The app now shows a specific hint if either is missing. After updating, check Accessibility access: an enabled entry for an older build can sometimes require adding the current app copy again.
 
 ## Privacy and limits
 
