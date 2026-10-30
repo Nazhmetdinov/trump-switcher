@@ -1,5 +1,31 @@
 # История изменений / Changelog
 
+## 0.6.52 · build 91 · 2026-10-30
+
+- Добавлен включаемый режим «Русский — основной язык»: одиночные F/B/D/R могут исправляться в А/И/В/К. Настоящие английские слова, a/I, установившийся английский контекст, исключения и отключённые направления сохраняют приоритет. Старые настройки автоматически не меняются.
+- Исправлена потеря последней буквы при анализе смешанной раскладки на пунктуационных клавишах: например, `таймве,` теперь рассматривается как целое «таймвеб», если это подтверждается словарём. Правильно набранное слово со знаком препинания остаётся нетронутым.
+- Добавлено 165 проверенных написаний и словоформ имён, брендов и разговорной лексики. Незнакомая английскому словарю строка сама по себе не разрешает замену: русский результат также должен быть подтверждён.
+- В локальном измерении p95 распознавания — 0,062 мс с режимом и без него. Новых ожиданий ввода нет; это не измерение задержки сторонних редакторов.
+
+## 0.6.51 · build 90 · 2026-10-27
+
+- Исправлено восстановление ввода после отменённой замены: пробел, Enter и Tab, возвращённые в прежнее приложение, теперь учитываются как граница слова. Следующее полное слово больше не пропускается из-за оставшегося состояния незавершённого ввода.
+- Проверка фокуса больше не уничтожает уже известную пустую границу слова. Пробел, нажатый при временном отказе проверки, позволяет начать следующее слово после восстановления доступа к полю. Отклонённые буквы по-прежнему запрещают исправление обрывка слова.
+- Проверены короткие русские слова и реальные таблицы поддерживаемых раскладок. Правильные английские слова, исключения и защитные проверки перед заменой сохранены. Дополнительные словари для этой ошибки не требовались.
+
+## 0.6.50 · build 89 · 2026-10-23
+
+- Пользовательские замены индексируются при изменении настроек: при вводе больше не проверяется заново валидность каждого правила. Приоритет, регистр, исключения и результаты распознавания сохранены.
+- Очередь клавиш переведена на кольцевой буфер; выдача ограничена порциями по 32 события. Убраны сдвиги массива и отдельный таймер подтверждения на каждое событие.
+- Исключения приложений кэшируются до изменения настроек или приложения. Переключение между уже включёнными раскладками больше не перечитывает системный каталог раскладок.
+- В локальном сравнении с 1000 правилами p95 анализа слова сократился с 13,39 до 0,28 мс. Это время алгоритма, а не задержка доставки клавиши редактору; гарантии нулевой задержки нет.
+
+## 0.6.49 · build 88 · 2026-10-23
+
+- При продолжающемся наборе ожидание неподтверждённой замены ограничено 120 мс после первой следующей клавиши. Раньше следующие клавиши могли ждать полного срока проверки редактора — 0,75–1 секунду.
+- Если редактор не успел ответить, исходные клавиши передаются в прежнем порядке без автоматической замены слова. Запоздавший результат не меняет текст; уже отправленные замены не повторяются. Ожидание доставки уже отправленных событий не сокращалось.
+- 383 441 проверка ядра прошла. Исправление проверено локально без ввода в сторонние приложения; реальная задержка зависит также от macOS и редактора.
+
 ## 0.6.48 · build 87 · 2026-10-23
 
 - Расширено распознавание редких слов из уже поставляемых словарей: ограниченный анализ сочетаний букв допускает дополнительную проверку Hunspell, но сам по себе не разрешает замену.
@@ -117,6 +143,32 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.52 · build 91 · 2026-10-30
+
+- Added opt-in Russian-primary mode for single-letter F/B/D/R → А/И/В/К corrections. Valid English words, a/I, established English context, exclusions and disabled directions retain priority. Legacy preferences remain unchanged.
+- Mixed-layout recognition now considers trailing punctuation keys that encode Russian letters, e.g. `таймве,` → `таймвеб`, while preserving correctly spelled source words with punctuation.
+- Added 165 reviewed name, brand and colloquial spellings/inflections. Absence from the English dictionary alone never authorizes a correction; the Russian candidate still needs evidence.
+- Local detector p95 was 0.062 ms with the mode both on and off. No new input waits were added; this is not an end-to-end editor latency measurement.
+
+## 0.6.51 · build 90 · 2026-10-27
+
+- Cancelled replacements now record Space, Enter and Tab returned to the original destination as word boundaries, preventing the next complete word from being skipped.
+- A rejected focus check preserves an already known empty word boundary. A rejected Space permits the next complete word after field permission recovers; rejected letters still prevent partial-word corrections.
+- Added short Russian word checks across supported physical layouts, cancellation and focus recovery. Correct English words, exclusions and edit ownership checks remain protected. This fix does not require new dictionaries.
+
+## 0.6.50 · build 89 · 2026-10-23
+
+- User replacement rules are indexed when settings change instead of revalidating every rule during typing. Precedence, case, exclusions and correction results are preserved.
+- Keyboard FIFO storage now uses a ring buffer and replay yields after 32 events. Per-event array shifts and redundant delivery watchdog timers were removed.
+- App exclusions are cached until settings or the app change. Switching between enabled input sources no longer reloads the system source catalogue.
+- A local comparison with 1,000 rules reduced detector p95 from 13.39 to 0.28 ms. This measures algorithm time, not end-to-end editor latency; zero latency is not guaranteed.
+
+## 0.6.49 · build 88 · 2026-10-23
+
+- Continuing typing bounds an uncommitted correction's wait to 120 ms after the first queued keyDown, instead of holding subsequent keys for the full 0.75–1 second editor grace.
+- If verification is too slow, original keys are preserved in order without correcting that word. Late results cannot edit text, and committed replacements are never replayed. Already-posted event delivery fences remain unchanged.
+- 383,441 core assertions passed. Verified locally without input in third-party apps; actual latency also depends on macOS and the editor.
 
 ## 0.6.48 · build 87 · 2026-10-23
 

@@ -1,5 +1,165 @@
 # Trump Switcher verification
 
+## 0.6.52 · build 91: Russian-primary recognition — 2026-10-30
+
+ARM64 release packaging, signature, 240 native-event, 182 in-process editor,
+721 configuration checks and 8 installer rollback tests passed. Installed bundle
+binary SHA-256: `a735feb1114f8dbf39d09f1afea348fb2636d11013c7dd4cbb8a48b412f6f8ef`.
+Russian-primary persistence and the installed app's ready status were verified
+after permission renewal. Intel
+cross-compilation, architecture/resource/signature checks also passed
+(`Build/russian-priority-intel.log`); Intel runtime was not tested.
+
+Added an optional persisted Russian-primary flag and an Advanced checkbox. Old
+settings decode absent flag as off; malformed values are rejected. With the flag
+on, isolated uppercase Latin keys whose Russian mapping is a known one-letter
+function word are eligible. Real source words (including a/I), English context,
+source/target exclusions, user rules and disabled directions retain precedence.
+No statistics/history of the user's text is stored or transmitted.
+
+A new mixed-source sequence regression found `таймве,` was skipped: the parser
+stripped the final comma before deciding whether Cyrillic input still contained
+an English letter key. Detection now inspects the original token for these keys;
+full candidate recognition and valid-source preservation remain mandatory. No
+focus checks, queue deadlines or transport ordering were relaxed.
+
+Added 165 unique locally authored spellings to the reviewed corpus (72 names,
+39 brand-related terms, 54 colloquial forms). Existing complete-corpus checks
+cover those additions, including alphabet, case, physical conversion, source
+collisions, punctuation and target exclusions. New tests enumerate every split
+position for mixed-language tokens in both directions at an 8 ms modeled key
+interval; no events are sent to editors. Mode persistence, negative cases and
+settings disable paths are exercised too.
+
+504,483 core assertions passed, including 1,019 Russian-priority/sequence checks.
+`Build/russian-priority-core.log`, `Build/russian-priority-release.log` contain
+results. This is offline validation, not proof of zero missed edits under real
+editor load. An unknown English token is still not sufficient on its own to
+justify rewriting it as Russian.
+
+Release CoreChecks `--benchmark-russian-priority`: 16 tokens, 1,600 warmed decisions
+per mode on this Mac. Off p50/p95/max: 0.0152/0.0616/0.0773 ms; on:
+0.0157/0.0622/0.1045 ms. These samples isolate the mode's detector cost, not the OS
+or editor. No timing threshold is asserted. Log: `Build/russian-priority-performance.log`.
+
+## 0.6.51 · build 90: short-word recovery — 2026-10-27
+
+Read only the installed app's settings and text-free diagnostic counters. Version
+0.6.49 had both directions and short words enabled, no custom rules or exclusions.
+The current session included rejected focus keys, unverified editor reads and one
+continued-typing timeout. These counters do not identify the exact user's words;
+empty-boundary counts include ordinary repeated separators.
+
+The dictionary already recognizes lower-case `f/d/r` as `а/в/к`. Found a separate
+stream-state defect: destination originals returned after cancellation did not
+update word-boundary provenance (session-routed originals did). The buffer stayed
+invalid after a returned Space, skipping the following complete word. Also,
+metadata rejection preserved an empty boundary in FocusPermission but the ensuing
+cancel() immediately invalidated it again. Rejected Space itself also invalidated
+rather than ended the partial token.
+
+Fixed all three paths. Destination tracking is restricted to the tracked, current
+PID; it never detects/corrects flushed text. Any flushed non-boundary character
+still invalidates partial-word tracking. A plain known boundary does not authorize
+an edit: focus, selection, text and routing checks still apply. Cancellation now
+resets its buffer before flushing so replayed boundary observations survive.
+
+Added 949 assertions covering actual OrderedInputCancellation ownership and the
+production CancelledInputBoundary observer, blocked letters vs separators, late
+focus recovery, all supported physical layout pairs, both language contexts,
+short-word disable settings and preservation of legitimate source words. Existing
+uppercase-initial and English abbreviation protections remain unchanged.
+480,199 core assertions, 240 native-event checks, 182 in-process editor checks,
+717 configuration checks and 8 installer rollback tests passed in the final
+ARM64 release build. Signed package verification passed; binary SHA-256:
+`d8fcd5fae6e0448e469e51fd451cc50a3b74fa0d7a37dc18fd54f85857bfe710`.
+No third-party text was read or entered. Native live delivery is not certified by
+these offline tests. Log: `Build/short-word-release-final.log`.
+Installed 0.6.51 after verifying backup `Backups/TrumpSwitcher-installed-20261027-154954.zip`;
+macOS permission renewal completed after user authentication. System Settings
+shows Trump Switcher enabled, and the installed app shows «Готов к работе».
+Intel cross-build, architecture, resources and signature also passed
+(`Build/short-word-intel.log`); Intel runtime was not exercised.
+
+## 0.6.50 · build 89: typing-path performance — 2026-10-23
+
+Audited event receipt, detector, queued replay, delivery acknowledgement and focus
+reads. Changes retain correction decisions and ownership checks:
+
+- Exact user replacement rules are compiled once per settings update. The index
+  preserves first-valid-rule priority, case, disabled directions, recursive
+  punctuation handling and source/target exclusions.
+- FIFO storage is circular rather than shifting the remaining array for each
+  event. Replay yields after at most 32 events and resumes behind the final ACK;
+  queued events still have one owner and retain arrival order on cancellation.
+- A coalesced delivery watchdog replaces per-event timer closures. Later fences
+  update its deadline; stale wakes reschedule instead of expiring the new fence.
+  The existing 750 ms delivery deadline remains unchanged.
+- App exclusions cache the last bundle-ID result, invalidated by settings changes.
+  Selected-source changes no longer reload the enabled-source catalogue; startup
+  and enabled-source notifications still refresh it.
+
+479,250 core assertions passed, including 95,809 new regression assertions against
+an independent FIFO oracle and the previous linear rule implementation. Capacity
+1/2/3/32/256/1024, wrapping, cancellation, copy semantics, duplicate commits and
+10,000 consecutive watchdog arms were exercised. Standard release checks also
+passed: 240 native-event, 182 in-process editor, 717 configuration and 8 installer
+rollback tests, plus the existing queue/punctuation models and package checks.
+No input was sent to third-party applications. Logs: `Build/performance-release.log`
+and `Build/input-performance.log`.
+
+Reproducible benchmark: release `CoreChecks --benchmark-input-performance`, bundled
+dictionaries, 12-token corpus, 120 timed decisions after warmup per configuration,
+5,000 exact and 500 pattern exclusions. Wall-clock CPU-path samples on this ARM
+Mac, not end-to-end event delivery; no threshold assertions or speed guarantee:
+
+| User rules | Path | p50 (ms) | p95 (ms) | Maximum (ms) |
+| --- | --- | ---: | ---: | ---: |
+| 0 | Previous linear lookup | 0.0289 | 0.2867 | 0.3047 |
+| 0 | Indexed lookup | 0.0281 | 0.2868 | 0.3100 |
+| 1,000 | Previous linear lookup | 0.5668 | 13.3890 | 13.6433 |
+| 1,000 | Indexed lookup | 0.0281 | 0.2786 | 0.3495 |
+
+Results agree for the complete benchmark corpus. The largest measured improvement
+requires many user rules; the default no-rule detector is effectively unchanged.
+The first key in an unverified field still has a bounded metadata read (25 ms
+budget), and final replacement revalidates ownership. Already-posted events still
+wait for transport acknowledgement. Those safeguards and OS scheduling mean this
+is not a claim of zero latency or proof that every reported live stall is resolved.
+
+ARM64 build and local runtime checks passed. The Intel bundle cross-compiled and
+passed architecture, resource and signature checks (`Build/performance-intel.log`);
+Intel runtime was not exercised on this ARM Mac. The toolchain emitted its existing
+missing-x86_64 compatibility-pack warning; this is not an Intel runtime validation.
+
+The installed 0.6.49 permission was restored separately. This 0.6.50 build is local;
+it was not installed or published during this audit.
+
+## 0.6.49 · build 88: bounded waiting during continued typing — 2026-10-23
+
+Code inspection found that a pending read-only replacement could retain subsequent
+physical keys for the full 750 ms editor grace (1 s decision watchdog). Added a
+120 ms decision budget starting with the first queued keyDown; subsequent keys
+do not extend it. A replayed boundary with a queued keyDown arms the same budget.
+KeyUp/modifiers alone preserve the previous idle-editor grace. Timeout uses the
+existing ordered cancellation path, without replaying committed edits. Results
+arriving after the deadline are rejected even when their callback precedes the
+timer; the deadline is also checked before input-source selection and final commit.
+
+This limits waiting BEFORE a replacement is committed, not OS scheduling latency
+or transport acknowledgement of already-posted input. When the editor is too
+slow, the original word is preserved without correction. No field identity,
+selection or text-verification check was removed. A text-free diagnostic counter
+records these cancellations.
+
+383,441 core assertions passed, including 5,966 new budget/ownership checks.
+Burst sizes 2/20/200/1000 exercise direct and replay-transferred boundaries and
+both timeout/result callback orders against an arrival-order oracle. Native-event
+(240), in-process editor (182), configuration (717), queue models and installer
+rollback (8) checks passed in the standard release build. No third-party editor
+or physical typing test was performed; this does not prove the sole cause of the
+reported real-world stalls. Log: `Build/typing-latency-release.log`.
+
 ## 0.6.48 · build 87 release verification — 2026-10-23
 
 The two development stages below are included together in this release.

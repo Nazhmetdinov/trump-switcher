@@ -45,6 +45,16 @@ if CommandLine.arguments.contains("--audit-punctuation") {
     exit(0)
 }
 
+if CommandLine.arguments.contains("--benchmark-input-performance") {
+    _ = inputPerformanceChecks()
+    benchmarkInputPerformance()
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--benchmark-russian-priority") {
+    benchmarkRussianPriority(); exit(0)
+}
+
 var count = 0
 count += wordReplacementChecks()
 count += inputDeliveryQueueChecks()
@@ -59,6 +69,8 @@ count += inputSourceRollbackChecks()
 count += layoutCoverageChecks()
 count += editorCapitalizationChecks()
 count += patternExclusionChecks()
+count += pendingInputBudgetChecks()
+count += inputPerformanceChecks()
 func check(_ condition: @autoclosure () -> Bool, _ name: String) {
     guard condition() else { fatalError("FAILED: \(name)") }
     count += 1
@@ -177,6 +189,8 @@ let resourceOverride = resourceArgument.flatMap { i in
 }
 // These checks deliberately exclude NSSpellChecker: packaged data must suffice.
 let bundled = LocalDictionary(includeSystem: false, directory: resourceOverride)
+count += shortWordRecoveryChecks(dictionary: bundled)
+count += russianPriorityChecks(dictionary: bundled)
 count += importedPolicyChecks(dictionary: bundled)
 count += release46Checks(dictionary: bundled)
 count += reviewedVocabularyChecks(dictionary: bundled)

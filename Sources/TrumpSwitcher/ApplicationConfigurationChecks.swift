@@ -189,7 +189,7 @@ enum ApplicationConfigurationChecks {
         let tables = views.compactMap { $0 as? NSTableView }
         expect(tables.count == 3, "all exclusion/rule lists constructed")
         let flagButtons = buttons.filter { $0.action.map(NSStringFromSelector) == "toggle:" }
-        expect(Set(flagButtons.map(\.tag)) == Set(0...8), "every behavior option has its own native control")
+        expect(Set(flagButtons.map(\.tag)) == Set(0...9), "every behavior option has its own native control")
         for control in flagButtons {
             let before = store.settings
             control.state = control.state == .on ? .off : .on; send(control)

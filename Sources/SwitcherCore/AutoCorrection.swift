@@ -40,6 +40,7 @@ public struct AutoCorrection {
                               settings: CorrectionSettings = CorrectionSettings(),
                               establishedLanguage: Layout? = nil,
                               exclusions compiledExclusions: CompiledExclusions? = nil,
+                              rules compiledRules: CompiledCorrectionRules? = nil,
                               convert: (String, Layout) -> String = { Conversion.convert($0, to: $1) },
                               onKnownSource: ((Layout) -> Void)? = nil) -> AutoCorrection? {
         guard (1...128).contains(token.utf16.count) else { return nil }
@@ -119,7 +120,10 @@ public struct AutoCorrection {
             return tail.count >= 3 && tail.allSatisfy { $0 == "." }
         }
         for (before, input, after) in variants {
-            if let rule = settings.rules.first(where: { $0.valid && $0.input == input }), settings.permits(rule.layout) {
+            let rule: CorrectionRule?
+            if let compiledRules { rule = compiledRules.rule(for: input) }
+            else { rule = settings.rules.first(where: { $0.valid && $0.input == input }) }
+            if let rule, settings.permits(rule.layout) {
                 return makeResult(before + rule.output + after, rule.layout, exactCase: true)
             }
         }
@@ -170,7 +174,11 @@ public struct AutoCorrection {
         let cyrillic = stem.unicodeScalars.contains { (0x410...0x44f).contains($0.value) || $0.value == 0x401 || $0.value == 0x451 }
         let latin = stem.unicodeScalars.contains { (65...90).contains($0.value) || (97...122).contains($0.value) }
         let letterKeys = "[];'.,`{}:\"<>\\"
-        let partialLayout = cyrillic && (latin || stem.contains(where: { letterKeys.contains($0) }))
+        // A Cyrillic token can end in a letter still encoded on an EN
+        // punctuation key (таймве, → таймвеб). Inspect the full token: split()
+        // has already removed that comma from stem. Valid source words were
+        // protected above, so ordinary punctuation on them stays unchanged.
+        let partialLayout = cyrillic && (latin || token.contains(where: { letterKeys.contains($0) }))
         // эх / ёж consist entirely of symbol keys on ABC (including § for the
         // PC ё position). Check the same bounded wrapper variants as words,
         // so punctuation around such a word cannot hide its alphabet entirely.
@@ -279,10 +287,12 @@ public struct AutoCorrection {
             if word.count <= 2 {
                 guard settings.shortWords, knownShort(word, target) else { return false }
                 if word.count == 1 {
-                    // Preserve initials and English a/I; Russian lowercase
-                    // function words typed on a Latin key remain eligible.
+                    // In Russian-priority mode an isolated Latin capital can
+                    // be a Russian function word. A known English context still
+                    // protects initials; real a/I were preserved above.
                     if source == .english {
-                        guard capitals == capitals.lowercased() else { return false }
+                        guard capitals == capitals.lowercased() ||
+                              (settings.prefersRussian && establishedLanguage != .english) else { return false }
                     } else {
                         guard ["a", "i"].contains(word.lowercased()) else { return false }
                     }
@@ -334,7 +344,7 @@ public struct AutoCorrection {
                     guard !current.isEmpty else { return }
                     if known(current, layout: source) { valid = false }
                     else if let correction = detect(current, recognizes: recognizes, recognizesFragment: recognizesFragment, recognizesBackoff: recognizesBackoff, isAddress: isAddress, settings: settings,
-                                                    establishedLanguage: establishedLanguage, exclusions: exclusions, convert: convert), correction.layout == target {
+                                                    establishedLanguage: establishedLanguage, exclusions: exclusions, rules: compiledRules, convert: convert), correction.layout == target {
                         result += correction.text; didChange = true
                     } else { valid = false }
                     current = ""

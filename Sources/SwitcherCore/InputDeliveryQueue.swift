@@ -15,32 +15,47 @@ public struct InputDeliveryQueue<Event> {
     private let capacity: Int
     private var epoch: UInt64 = 0
     private var serial: UInt64 = 0
-    private var queued: [Event] = []
+    private var queued: [Event?]
+    private var head = 0
+    private var queuedCount = 0
     private var inFlight: Lease?
 
     public init(capacity: Int = 256) {
         precondition(capacity > 0)
         self.capacity = capacity
+        queued = Array(repeating: nil, count: capacity)
     }
 
-    public var count: Int { queued.count + (inFlight == nil ? 0 : 1) }
+    public var count: Int { queuedCount + (inFlight == nil ? 0 : 1) }
     public var isEmpty: Bool { count == 0 }
     public var hasInFlight: Bool { inFlight != nil }
+
+    public func contains(where predicate: (Event) -> Bool) -> Bool {
+        if let inFlight, predicate(inFlight.event) { return true }
+        for offset in 0..<queuedCount {
+            if let event = queued[(head + offset) % capacity], predicate(event) { return true }
+        }
+        return false
+    }
 
     /// False means the caller must preserve this incoming event itself; no
     /// event already owned by the queue is discarded to make room.
     @discardableResult public mutating func enqueue(_ event: Event) -> Bool {
         guard count < capacity else { return false }
-        queued.append(event)
+        queued[(head + queuedCount) % capacity] = event
+        queuedCount += 1
         return true
     }
 
     /// The current event remains owned by the queue until commit/transfer.
     /// A cancellation inside process(event) therefore flushes it BEFORE its tail.
     public mutating func beginDelivery() -> Lease? {
-        guard inFlight == nil, !queued.isEmpty else { return nil }
+        guard inFlight == nil, queuedCount > 0 else { return nil }
         serial &+= 1
-        let lease = Lease(event: queued.removeFirst(), queueID: identity, epoch: epoch, serial: serial)
+        let lease = Lease(event: queued[head]!, queueID: identity, epoch: epoch, serial: serial)
+        queued[head] = nil
+        head = (head + 1) % capacity
+        queuedCount -= 1
         inFlight = lease
         return lease
     }
@@ -65,9 +80,15 @@ public struct InputDeliveryQueue<Event> {
     /// cannot duplicate the batch. The executing event precedes all queued input.
     public mutating func cancel() -> [Event] {
         let batch = inFlight.map { [$0.event] } ?? []
-        let result = batch + queued
+        var result = batch
+        result.reserveCapacity(count)
+        for offset in 0..<queuedCount {
+            let index = (head + offset) % capacity
+            result.append(queued[index]!)
+            queued[index] = nil
+        }
         inFlight = nil
-        queued.removeAll(keepingCapacity: true)
+        head = 0; queuedCount = 0
         epoch &+= 1
         return result
     }

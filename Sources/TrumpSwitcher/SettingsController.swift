@@ -269,17 +269,18 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
         let behavior = tab("Что исправлять", in: advancedTabs)
         let options = [(1, "Ошибки вроде ghbdtn → привет"), (2, "Ошибки вроде руддщ → hello"),
             (3, "Короткие слова: и, в, не, для"), (4, "Слова в кавычках, скобках и со знаками препинания"),
-            (5, "Адреса сайтов и электронной почты"), (8, "Слова, набранные БОЛЬШИМИ БУКВАМИ")]
+            (5, "Адреса сайтов и электронной почты"), (8, "Слова, набранные БОЛЬШИМИ БУКВАМИ"),
+            (9, "Русский — основной язык: F → А, B → И, D → В")]
         for (index, option) in options.enumerated() { checkbox(option.1, tag: option.0, behavior, y: 340 - CGFloat(index) * 35) }
         loginControl.setButtonType(.switch)
         loginControl.title = "Запускать Trump Switcher при входе в macOS"
         loginControl.font = .systemFont(ofSize: 14)
         loginControl.target = self; loginControl.action = #selector(toggleLaunchAtLogin)
-        loginControl.frame = NSRect(x: 22, y: 105, width: 630, height: 28)
+        loginControl.frame = NSRect(x: 22, y: 95, width: 630, height: 28)
         behavior.addSubview(loginControl)
         loginDetail.font = .systemFont(ofSize: 12)
         loginDetail.textColor = .secondaryLabelColor
-        loginDetail.frame = NSRect(x: 44, y: 73, width: 690, height: 29)
+        loginDetail.frame = NSRect(x: 44, y: 62, width: 690, height: 29)
         behavior.addSubview(loginDetail)
         loginApprovalButton.title = "Открыть объекты входа macOS…"
         loginApprovalButton.bezelStyle = .rounded
@@ -314,7 +315,7 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
     func synchronize(_ settings: CorrectionSettings) {
         self.settings = settings
         let flags = [settings.automatic, settings.toRussian, settings.toEnglish, settings.shortWords, settings.punctuation,
-                     settings.addresses, settings.onEnter, settings.onTab, settings.allowAllCaps]
+                     settings.addresses, settings.onEnter, settings.onTab, settings.allowAllCaps, settings.prefersRussian]
         for (i, flag) in flags.enumerated() { controls[i]?.state = flag ? .on : .off }
         russianLayout.selectItem(at: InputSources.russianIDs.firstIndex(of: settings.preferredRussian) ?? 0)
         englishLayout.selectItem(at: InputSources.englishIDs.firstIndex(of: settings.preferredEnglish) ?? 0)
@@ -480,6 +481,7 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
         case 5: next.addresses = value
         case 6: next.onEnter = value
         case 7: next.onTab = value
+        case 9: next.russianPriority = value ? true : nil
         default: next.allowAllCaps = value
         }
         commit(next)
@@ -489,6 +491,7 @@ final class SettingsController: NSWindowController, NSTableViewDataSource, NSTab
         next.automatic = defaults.automatic; next.toRussian = defaults.toRussian; next.toEnglish = defaults.toEnglish
         next.shortWords = defaults.shortWords; next.punctuation = defaults.punctuation; next.addresses = defaults.addresses
         next.onEnter = defaults.onEnter; next.onTab = defaults.onTab; next.allowAllCaps = defaults.allowAllCaps
+        next.russianPriority = defaults.russianPriority
         if commit(next, "Обычный режим включён. Ваши списки и замены сохранены.") { resume(); updateState() }
     }
     @objc private func layoutChanged() {

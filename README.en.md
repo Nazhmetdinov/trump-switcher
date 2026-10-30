@@ -17,9 +17,11 @@ Correction normally runs after Space; Enter and Tab are configurable boundaries.
 
 Exclusions in «Не менять» support exact words, prefixes and substrings. Existing exact exclusions are preserved on upgrade.
 
+If you mostly write in Russian, enable **«Русский — основной язык»** (Russian is the primary language) in **Settings → «Дополнительно» → «Что исправлять»**. It allows isolated `F/B/D/R` to become `А/И/В/К`, while valid English words and established English context retain priority. This is opt-in; upgrading does not change your existing preference.
+
 ## Install
 
-1. Download the DMG for your Mac: [Apple Silicon (M1 or newer)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.48/TrumpSwitcher-0.6.48-build87-AppleSilicon.dmg) or [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.48/TrumpSwitcher-0.6.48-build87-Intel.dmg). Requires **macOS 13+**.
+1. Download the DMG for your Mac: [Apple Silicon (M1 or newer)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.52/TrumpSwitcher-0.6.52-build91-AppleSilicon.dmg) or [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.52/TrumpSwitcher-0.6.52-build91-Intel.dmg). Requires **macOS 13+**.
 2. Open the image and drag **Trump Switcher** onto **Applications**.
 3. Start it from Applications. Its icon appears in the menu bar without opening a window or adding a Dock icon.
 4. Choose **«Разрешения macOS…»** (macOS Permissions) from the menu-bar icon and grant **Accessibility** access. This permits the app to inspect the current word and type its correction. The same menu opens settings and offers optional launch at login.

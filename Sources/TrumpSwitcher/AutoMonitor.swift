@@ -106,6 +106,7 @@ final class AutoMonitor {
         var cancellation: ReplacementPreflight.Cancellation
         let complete: (ReplacementPreflight.Result) -> BoundaryCompletion
         let decisionDeadline: TimeInterval
+        var inputBudget: PendingInputBudget
         var pinnedOpaqueContext: ReplacementPreflight.OpaqueContext?
         var probeStarted = false
     }
@@ -130,6 +131,7 @@ final class AutoMonitor {
     }
     private var pendingBoundary: HeldBoundary?
     private var deliveryFence: DeliveryFence?
+    private var deliveryWatchdog = CoalescedDeadline()
     private var deliveryTap: CFMachPort?
     private var deliverySource: CFRunLoopSource?
     private var deliveryPID: pid_t?
@@ -168,8 +170,15 @@ final class AutoMonitor {
     private let addresses = AddressRecognizer()
     private let keyboard = KeyboardLayouts()
     private var compiledExclusions = CompiledExclusions([])
+    private var compiledRules = CompiledCorrectionRules([])
+    private var appExclusionCache: (id: String, excluded: Bool)?
     var settings = CorrectionSettings() {
-        didSet { compiledExclusions = CompiledExclusions(settings.excludedWords, rules: settings.wordExclusionRules ?? []); cancel() }
+        didSet {
+            compiledExclusions = CompiledExclusions(settings.excludedWords, rules: settings.wordExclusionRules ?? [])
+            compiledRules = CompiledCorrectionRules(settings.rules)
+            appExclusionCache = nil
+            cancel()
+        }
     }
     private static let ownEvent: Int64 = 0x5452554d505357
     // Native input-context/cursor UI can temporarily stall an editor for about
@@ -217,6 +226,7 @@ final class AutoMonitor {
     private(set) var deliveryAcks = 0
     private(set) var deliveryTimeouts = 0
     private(set) var orderedCancellations = 0
+    private(set) var typingWaitExpirations = 0
     // Test-only delivery counts at the owned process's actual head tap. Replay
     // evaluation is not delivery; only events returned by receive are counted.
     private(set) var forwardedKeyDowns = 0
@@ -235,7 +245,7 @@ final class AutoMonitor {
             "\nИтоги отложенных проверок (отправка не подтверждает результат в редакторе):\n" + final.joined(separator: "\n")
     }
     var reliabilityStatus: String {
-        (browserAccessibility.map { $0.status + "\n" } ?? "") + "Повторов с восстановленным нажатием: \(restoredRepeatPresses)\n" +
+        (browserAccessibility.map { $0.status + "\n" } ?? "") + "Ожидание редактора прервано ради продолжающегося ввода: \(typingWaitExpirations)\nПовторов с восстановленным нажатием: \(restoredRepeatPresses)\n" +
         "Проверок нового поля на первой клавише: \(firstKeyFocusChecks) · исключённых клавиш: \(rejectedContextKeys)\nГраниц без полного слова: \(incompleteWords) · слов без нужды в замене / неоднозначных: \(unchangedWords) · замен на пунктуации: \(punctuationCorrections)\nТекст перед заменой проверен: \(verifiedEditorWords) · изменён редактором: \(changedEditorWords) · внешний ввод: \(foreignInputEvents)\nЗамены целым словом подтверждены: \(directCorrections) · без подтверждения: \(unconfirmedWrites)\nКлавиатурный способ: отправлено \(keyboardFallbacks) · подтверждено \(confirmedKeyboardWrites) · результат недоступен для проверки: \(unobservedKeyboardWrites) · последующих изменений редактором: \(lateEditorChanges)\nПосле исправления сохраняется раскладка исправленного слова"
     }
     var hasPendingInput: Bool { cancelledInput != nil || pendingBoundary != nil || deliveryFence != nil || replayPID != nil || !heldEvents.isEmpty }
@@ -355,6 +365,7 @@ final class AutoMonitor {
                fixture?.admits(event) == true || KeyboardEventOrigin.isSystem(
                    stateID: event.getIntegerValueField(.eventSourceStateID), userData: event.getIntegerValueField(.eventSourceUserData)),
                let copy = event.copy(), heldEvents.enqueue(copy) {
+                limitPendingWait(isKeyDown: type == .keyDown)
                 pass = false
                 return false
             }
@@ -411,7 +422,7 @@ final class AutoMonitor {
         defer {
             if !asynchronousBoundary, let app = boundaryApp, app.processIdentifier != ProcessInfo.processInfo.processIdentifier,
                !IsSecureEventInputEnabled(), !KeyboardSafety.passwordApp(app.bundleIdentifier ?? ""),
-               !settings.excludesApp(app.bundleIdentifier ?? "") {
+               !excludesApp(app.bundleIdentifier ?? "") {
                 // Fixed reason strings and a length only; never store the token.
                 let entry = "\(app.localizedName ?? "Приложение"): \(boundaryLength) симв. · \(decisionStatus)"
                 recentBoundaryResults.append(entry)
@@ -446,7 +457,7 @@ final class AutoMonitor {
             secure = IsSecureEventInputEnabled()
         }
         guard !secure, permitted, NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else {
-            buffer.reset(startOfWord: false)
+            buffer.rejectKey(wordBoundary: isRecordedBoundary && !event.flags.contains(.maskAlternate))
             periodContinuation = nil
             rejectedContextKeys += 1
             decisionStatus = secure ? "Secure Input" : (!permitted ? "Фокус пока исключён / не готов" :
@@ -476,7 +487,9 @@ final class AutoMonitor {
         }
         if let sourceID, sourceID != currentID {
             typingLanguage = nil
-            transition = nil; recentSelectionProgress = nil; periodContinuation = nil; InputSources.refreshEnabledSources()
+            transition = nil; recentSelectionProgress = nil; periodContinuation = nil
+            // Enabled-source notifications refresh the catalogue separately.
+            // A selection change alone does not need five synchronous TIS lists.
             // Keep the actually typed characters across a manual source change.
             // The detector can resolve a complete mixed-script word at its boundary.
         }
@@ -507,7 +520,7 @@ final class AutoMonitor {
         func detect(_ token: String, otherTable: KeyboardLayoutTable?) -> AutoCorrection? {
             AutoCorrection.detect(token, recognizes: dictionary.recognizes, recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff,
                 isAddress: addresses.recognizes, settings: settings, establishedLanguage: typingLanguage,
-                exclusions: compiledExclusions, convert: { value, target in
+                exclusions: compiledExclusions, rules: compiledRules, convert: { value, target in
                     guard let to = target == currentLayout ? currentTable : otherTable else { return value }
                     let from = target == currentLayout ? otherTable : currentTable
                     return from?.convert(value, to: to) ?? value
@@ -690,6 +703,7 @@ final class AutoMonitor {
             }
             guard pendingBoundary?.id == transactionID, permitted, !IsSecureEventInputEnabled(),
                   NSWorkspace.shared.frontmostApplication?.processIdentifier == destinationPID,
+                  pendingBoundary?.inputBudget.expired(at: ProcessInfo.processInfo.systemUptime) == false,
                   InputSources.currentID() == currentID else {
                 decisionStatus = "Приложение или раскладка изменились перед заменой"; return .pass
             }
@@ -752,6 +766,7 @@ final class AutoMonitor {
             guard pendingBoundary?.id == transactionID, permitted, !IsSecureEventInputEnabled(),
                   NSWorkspace.shared.frontmostApplication?.processIdentifier == destinationPID,
                   InputSources.currentID() == replacementTable.id,
+                  pendingBoundary?.inputBudget.expired(at: ProcessInfo.processInfo.systemUptime) == false,
                   ProcessInfo.processInfo.systemUptime - started < Self.pendingDecisionTimeout else {
                 restoreSource()
                 decisionStatus = "Контекст или срок ожидания изменился; текст не изменён"
@@ -920,6 +935,7 @@ final class AutoMonitor {
             guard pendingBoundary?.id == transaction.id, periodContinuation?.id == continuation.id,
                   permitted, !awaitingContext, !IsSecureEventInputEnabled(),
                   eligibleApplication()?.processIdentifier == destinationPID, InputSources.currentID() == table.id,
+                  pendingBoundary?.inputBudget.expired(at: ProcessInfo.processInfo.systemUptime) == false,
                   ProcessInfo.processInfo.systemUptime < transaction.decisionDeadline,
                   armDeliveryFence(terminal: terminal, to: destinationPID) else {
                 decisionStatus = "Контекст, срок или доставка продолжения многоточия изменились"
@@ -964,8 +980,11 @@ final class AutoMonitor {
         let createdAt = ProcessInfo.processInfo.systemUptime
         pendingBoundary = HeldBoundary(id: serial, pid: pid, event: copy, read: read,
             cancellation: ReplacementPreflight.Cancellation(), complete: complete,
-            decisionDeadline: createdAt + Self.pendingReadTimeout)
+            decisionDeadline: createdAt + Self.pendingReadTimeout,
+            inputBudget: PendingInputBudget(startedAt: createdAt, idleTimeout: Self.pendingDecisionTimeout))
         finalBoundaryResults.begin(id: serial, processID: pid, characterCount: wordLength)
+        // A boundary replayed from a backlog already has typing behind it.
+        limitPendingWait(isKeyDown: heldEvents.contains { $0.type == .keyDown })
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.pendingDecisionTimeout) { [weak self] in
             guard let self, self.pendingBoundary?.id == serial else { return }
             self.longestDecisionMS = max(self.longestDecisionMS, (ProcessInfo.processInfo.systemUptime - createdAt) * 1000)
@@ -975,6 +994,29 @@ final class AutoMonitor {
         }
         startHeldProbe(serial: serial)
         return false
+    }
+
+    private func limitPendingWait(isKeyDown: Bool) {
+        let now = ProcessInfo.processInfo.systemUptime
+        guard let serial = pendingBoundary?.id,
+              let deadline = pendingBoundary?.inputBudget.noteInput(isKeyDown: isKeyDown, at: now) else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(0, deadline - now)) { [weak self] in
+            guard let self, self.pendingBoundary?.id == serial else { return }
+            _ = self.releaseExpiredPendingWait()
+        }
+    }
+
+    /// Before commit, only the original boundary and queued originals are owned.
+    /// Reuse ordered cancellation; never resend an already posted correction.
+    @discardableResult
+    private func releaseExpiredPendingWait() -> Bool {
+        guard let pending = pendingBoundary,
+              pending.inputBudget.expired(at: ProcessInfo.processInfo.systemUptime) else { return false }
+        if pending.inputBudget.typingDeadline != nil { typingWaitExpirations += 1 }
+        let reason = "Редактор не успел подтвердить замену; продолжающийся ввод сохранён"
+        flushHeldInput(diagnosticOutcome: .timedOut, diagnosticReason: reason)
+        decisionStatus = reason
+        return true
     }
 
     private func startHeldProbe(serial: UInt64) {
@@ -990,11 +1032,15 @@ final class AutoMonitor {
                 // worker. Canceled jobs leave the serial queue without another
                 // AX read; an in-flight read stops at its next bounded step.
                 guard pending.cancellation.isActive else { return }
-                let result = pending.read(pending.cancellation, pending.decisionDeadline, pending.pinnedOpaqueContext)
+                let result = pending.read(pending.cancellation,
+                    min(pending.decisionDeadline, pending.inputBudget.deadline), pending.pinnedOpaqueContext)
                 pending.cancellation.cancel()
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.tap != nil, let pending = self.pendingBoundary,
                           pending.id == serial else { return }
+                    // A queued completion can run before the timer even after
+                    // its deadline. Reject it before any source/text mutation.
+                    guard !self.releaseExpiredPendingWait() else { return }
                     let completion = pending.complete(result)
                     self.trace("completed", type: pending.event.type, event: pending.event)
                     if case .committed = completion {
@@ -1044,6 +1090,7 @@ final class AutoMonitor {
     private func drainHeldInput() {
         guard let destination = replayPID, pendingBoundary == nil, deliveryFence == nil else { return }
         let serial = pendingSerial
+        var processed = 0
         while let lease = heldEvents.beginDelivery() {
             replayLease = lease
             let event = lease.event
@@ -1057,6 +1104,13 @@ final class AutoMonitor {
             guard pendingSerial == serial, replayPID == destination else { return }
             let key = event.getIntegerValueField(.keyboardEventKeycode)
             if event.type == .keyDown, [Int64(kVK_Tab), Int64(kVK_Return), Int64(kVK_ANSI_KeypadEnter)].contains(key) {
+                if deliveryFence == nil { scheduleDrain(serial: serial, destination: destination) }
+                return
+            }
+            processed += 1
+            if processed >= 32, !heldEvents.isEmpty {
+                // Yield the run loop between bounded cohorts. The last posted
+                // event's ACK resumes the FIFO; consumed-only cohorts yield too.
                 if deliveryFence == nil { scheduleDrain(serial: serial, destination: destination) }
                 return
             }
@@ -1148,14 +1202,25 @@ final class AutoMonitor {
         deliveryFence = fence
         // This timer never resends committed events. If the destination stops
         // draining, preserve only originals still owned here and stop waiting.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.75) { [weak self] in
-            guard let self, self.deliveryFence?.id == serial else { return }
-            self.deliveryTimeouts += 1
-            self.trace("delivery-timeout", type: terminal.type, event: terminal)
-            self.decisionStatus = "Доставка клавиш не подтверждена; повторной замены не было"
-            self.releaseCancelledInputAfterFailure()
+        if let wakeAt = deliveryWatchdog.arm(until: ProcessInfo.processInfo.systemUptime + 0.75) {
+            scheduleDeliveryWatchdog(at: wakeAt)
         }
         return true
+    }
+
+    private func scheduleDeliveryWatchdog(at deadline: TimeInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(0, deadline - ProcessInfo.processInfo.systemUptime)) { [weak self] in
+            guard let self else { return }
+            switch self.deliveryWatchdog.wake(at: ProcessInfo.processInfo.systemUptime) {
+            case .idle: return
+            case .reschedule(let next): self.scheduleDeliveryWatchdog(at: next)
+            case .expired:
+                guard self.deliveryFence != nil else { return }
+                self.deliveryTimeouts += 1
+                self.decisionStatus = "Доставка клавиш не подтверждена; повторной замены не было"
+                self.releaseCancelledInputAfterFailure()
+            }
+        }
     }
 
     private func acknowledgeDelivery(_ event: CGEvent) {
@@ -1167,6 +1232,7 @@ final class AutoMonitor {
             guard let self, self.deliveryFence?.id == fence.id else { return }
             self.deliveryAcks += 1
             self.deliveryFence = nil
+            self.deliveryWatchdog.disarm()
             self.manualConversionGate.noteInputHandoff(at: ProcessInfo.processInfo.systemUptime)
             guard self.tap != nil else { return }
             self.resumeAfterDelivery(fence)
@@ -1192,6 +1258,7 @@ final class AutoMonitor {
     }
 
     private func detachDeliveryTap() {
+        deliveryWatchdog.disarm()
         if let deliveryTap { CGEvent.tapEnable(tap: deliveryTap, enable: false); CFMachPortInvalidate(deliveryTap) }
         if let deliverySource { CFRunLoopRemoveSource(CFRunLoopGetMain(), deliverySource, .commonModes) }
         deliveryTap = nil; deliverySource = nil; deliveryPID = nil
@@ -1277,11 +1344,17 @@ final class AutoMonitor {
             }
             if let terminal = events.last {
                 guard armDeliveryFence(terminal: terminal, to: cancelled.pid) else {
-                    for event in events { event.postToPid(cancelled.pid) }
+                    for event in events {
+                        trackCancelledDestinationBoundary(event, pid: cancelled.pid)
+                        event.postToPid(cancelled.pid)
+                    }
                     releaseCancelledInputAfterFailure()
                     return
                 }
-                for event in events { event.postToPid(cancelled.pid) }
+                for event in events {
+                    trackCancelledDestinationBoundary(event, pid: cancelled.pid)
+                    event.postToPid(cancelled.pid)
+                }
                 return
             }
             _ = cancelledInput?.queue.destinationAcknowledged()
@@ -1347,33 +1420,21 @@ final class AutoMonitor {
         }
     }
 
+    private func trackCancelledDestinationBoundary(_ event: CGEvent, pid destination: pid_t) {
+        // Only boundary provenance; no detection or mutation while flushing.
+        // Events routed to an old app must not arm typing in the current app.
+        guard pid == destination,
+              NSWorkspace.shared.frontmostApplication?.processIdentifier == destination else { return }
+        trackCancelledBoundary(event)
+    }
+
     private func trackCancelledBoundary(_ event: CGEvent) {
-        if [.leftMouseDown, .rightMouseDown, .otherMouseDown].contains(event.type) {
-            buffer.reset()
-            sessionReplayBoundary.record(.focusNavigation)
-            return
-        }
-        guard event.type == .keyDown else { return }
-        let key = event.getIntegerValueField(.keyboardEventKeycode)
-        if let shortcut = TypingShortcut.action(code: UInt16(clamping: key), command: event.flags.contains(.maskCommand),
-            control: event.flags.contains(.maskControl), option: event.flags.contains(.maskAlternate),
-            shift: event.flags.contains(.maskShift), function: event.flags.contains(.maskSecondaryFn)) {
-            shortcut.apply(to: &buffer)
-            switch shortcut {
-            case .inputSource: sessionReplayBoundary.record(.unchanged)
-            case .selectAll: sessionReplayBoundary.record(.boundary)
-            case .invalidate:
-                let appSwitch = key == Int64(kVK_Tab) && event.flags.contains(.maskCommand) &&
-                    !event.flags.contains(.maskControl) && !event.flags.contains(.maskAlternate)
-                sessionReplayBoundary.record(appSwitch ? .focusNavigation : .unknownText)
-            }
-        } else if [Int64(kVK_Space), Int64(kVK_Return), Int64(kVK_Tab), Int64(kVK_ANSI_KeypadEnter)].contains(key) {
-            buffer.reset()
-            sessionReplayBoundary.record(.boundary)
-        } else {
-            buffer.reset(startOfWord: false)
-            sessionReplayBoundary.record(.unknownText)
-        }
+        CancelledInputBoundary.observe(key: UInt16(clamping: event.getIntegerValueField(.keyboardEventKeycode)),
+            keyDown: event.type == .keyDown,
+            click: [.leftMouseDown, .rightMouseDown, .otherMouseDown].contains(event.type),
+            command: event.flags.contains(.maskCommand), control: event.flags.contains(.maskControl),
+            option: event.flags.contains(.maskAlternate), shift: event.flags.contains(.maskShift),
+            function: event.flags.contains(.maskSecondaryFn), buffer: &buffer, replay: &sessionReplayBoundary)
     }
 
     /// Last-resort fail-open path for a disabled tap, shutdown or lost ACK.
@@ -1393,6 +1454,7 @@ final class AutoMonitor {
         pendingSerial &+= 1; deliverySerial &+= 1
         for event in owned?.destination ?? [] {
             if consumeOriginalKeyUp(event) { continue }
+            trackCancelledDestinationBoundary(event, pid: cancelled.pid)
             postOriginal(event, to: cancelled.pid, tracked: false)
         }
         for event in owned?.session ?? [] {
@@ -1530,9 +1592,15 @@ final class AutoMonitor {
         guard !IsSecureEventInputEnabled(), let app = NSWorkspace.shared.frontmostApplication,
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier,
               !KeyboardSafety.passwordApp(app.bundleIdentifier ?? ""),
-              !settings.excludesApp(app.bundleIdentifier ?? "") else { return nil }
+              !excludesApp(app.bundleIdentifier ?? "") else { return nil }
         if let fixture, !fixture.alive || app.processIdentifier != fixture.process.processIdentifier { return nil }
         return app
+    }
+    private func excludesApp(_ id: String) -> Bool {
+        if let cached = appExclusionCache, cached.id == id { return cached.excluded }
+        let result = settings.excludesApp(id)
+        appExclusionCache = (id, result)
+        return result
     }
     private func refreshContext() {
         guard let app = eligibleApplication() else {
@@ -1646,7 +1714,7 @@ final class AutoMonitor {
             contextStatus = allowed ? "Фокус без ответа AX · клавиатура разрешена" : "AX недоступен · последнее поле исключено"
         }
         permission.resolve(allowed, buffer: &buffer)
-        if !permitted { cancel() }
+        if !permitted { cancel(preservingEmptyBoundary: true) }
     }
 
     /// No deferred manual edit: its text/selection must belong to this request,
@@ -1657,12 +1725,14 @@ final class AutoMonitor {
         cancel()
         return allowed
     }
-    func cancel() {
+    func cancel(preservingEmptyBoundary: Bool = false) {
+        let cancelledBuffer = buffer.afterCancellation(preserveEmptyBoundary: preservingEmptyBoundary)
         typingLanguage = nil
         unobservedKeyboardWrites += observations.count
         for cancellation in observations.values { cancellation.cancel() }
         observations.removeAll()
-        flushHeldInput(); buffer.reset(startOfWord: false); layout = nil; sourceID = nil; transition = nil
+        buffer = cancelledBuffer
+        flushHeldInput(); layout = nil; sourceID = nil; transition = nil
     }
     private func detachObserver() {
         if let observer { CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .commonModes) }

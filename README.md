@@ -17,9 +17,11 @@ Trump Switcher исправляет слово, случайно набранн�
 
 Исключения в разделе «Не менять» могут совпадать с целым словом, его началом или частью. Старые точные исключения сохраняются при обновлении.
 
+Если преимущественно пишете по-русски, включите **«Русский — основной язык»** в **Настройки → Дополнительно → Что исправлять**. Режим помогает распознавать одиночные `F/B/D/R` как «А/И/В/К»; правильные английские слова и установленный английский контекст сохраняют приоритет. Режим включается по выбору и автоматически не меняет прежние настройки.
+
 ## Установка
 
-1. Скачайте DMG для своего Mac: [Apple Silicon (M1 и новее)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.48/TrumpSwitcher-0.6.48-build87-AppleSilicon.dmg) или [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.48/TrumpSwitcher-0.6.48-build87-Intel.dmg). Нужна **macOS 13+**.
+1. Скачайте DMG для своего Mac: [Apple Silicon (M1 и новее)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.52/TrumpSwitcher-0.6.52-build91-AppleSilicon.dmg) или [Intel (x86_64)](https://github.com/Nazhmetdinov/trump-switcher/releases/download/v0.6.52/TrumpSwitcher-0.6.52-build91-Intel.dmg). Нужна **macOS 13+**.
 2. Откройте образ и перетащите **Trump Switcher** в папку **«Программы»**.
 3. Запустите приложение из «Программ». Его значок появится в строке меню без окна и значка в Dock.
 4. Через меню значка откройте **«Разрешения macOS…»** и предоставьте доступ **«Универсальный доступ»** (Accessibility). Он нужен для чтения текущего слова и отправки исправленного текста. В этом же меню открываются настройки и включается запуск вместе с Mac.

@@ -36,6 +36,9 @@ public struct CorrectionSettings: Codable, Equatable {
     public var toRussian = true
     public var toEnglish = true
     public var shortWords = true
+    // Optional so old settings keep their conservative initials policy.
+    public var russianPriority: Bool? = nil
+    public var prefersRussian: Bool { russianPriority == true }
     public var punctuation = true
     public var addresses = true
     public var onEnter = true

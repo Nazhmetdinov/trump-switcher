@@ -7,6 +7,16 @@ public struct TypingBuffer {
     private var wholeSelection = false
     public private(set) var requiresVerifiedText = false
     public var isAccepting: Bool { accepting }
+    public var isAtWordBoundary: Bool { accepting && token.isEmpty }
+    public func afterCancellation(preserveEmptyBoundary: Bool = false) -> TypingBuffer {
+        var result = TypingBuffer()
+        result.reset(startOfWord: preserveEmptyBoundary && isAtWordBoundary)
+        return result
+    }
+    /// Rejected text must never become a partial correction. A literal Space,
+    /// Enter or Tab still ends that text even when metadata was unavailable.
+    /// This records a boundary, not permission to inspect or edit a field.
+    public mutating func rejectKey(wordBoundary: Bool) { reset(startOfWord: wordBoundary) }
     public init() {}
 
     public mutating func reset(startOfWord: Bool = true) {
