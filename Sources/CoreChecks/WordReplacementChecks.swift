@@ -7,6 +7,16 @@ func wordReplacementChecks() -> Int {
         guard condition() else { fatalError("Word replacement: " + name) }
         count += 1
     }
+    for prefix in ["", "абзац ", "строка\n"] {
+        expect(ReplacementContext.matches(original: "lkz", beforeCaret: prefix + "lkz", afterCaret: "слово",
+            selectionLength: 0, insertingSpace: true), "held space separates the existing right word")
+    }
+    expect(!ReplacementContext.matches(original: "lkz", beforeCaret: "midlkz", afterCaret: "word",
+        selectionLength: 0, insertingSpace: true), "do not edit inside an earlier word")
+    expect(!ReplacementContext.matches(original: "lkz", beforeCaret: "lkz", afterCaret: "word",
+        selectionLength: 1, insertingSpace: true), "do not replace active selection")
+    var moved = TypingBuffer(); moved.append("x"); moved.beginAtMovedCaret(); moved.append("d")
+    expect(moved.requiresVerifiedText && moved.finishWord() == "d", "navigation requires fresh proof for first short word")
     final class Editor {
         var text: String
         var selection: NSRange

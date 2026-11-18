@@ -49,6 +49,31 @@ enum EditorReplacementChecks {
                 }
             }
         }
+        for (typed, corrected) in [("d", "в"), ("lkz", "для"), ("b[", "их"), ("руддщ", "hello")] {
+            for prefix in ["", "🙂 "] {
+                let view = NSTextView(frame: .zero)
+                let suffix = "работы"
+                view.string = prefix + suffix
+                view.setSelectedRange(NSRange(location: prefix.utf16.count, length: 0))
+                view.insertText(typed, replacementRange: view.selectedRange())
+                let caret = view.selectedRange()
+                let text = view.string as NSString
+                guard ReplacementContext.matches(original: typed, beforeCaret: text.substring(to: caret.location),
+                    afterCaret: text.substring(from: caret.location), selectionLength: caret.length, insertingSpace: true),
+                    let keys = KeyboardReplacement.keys(original: typed, corrected: corrected,
+                        layout: corrected == "hello" ? .english : .russian) else {
+                    fatalError("Held space before an existing word was rejected")
+                }
+                for key in keys {
+                    if let content = key.text { view.insertText(content, replacementRange: view.selectedRange()) }
+                    else { view.deleteBackward(nil) }
+                }
+                guard view.string == prefix + corrected + " " + suffix,
+                    view.selectedRange() == NSRange(location: (prefix + corrected + " ").utf16.count, length: 0)
+                    else { fatalError("Insertion damaged the following word or caret") }
+                count += 1
+            }
+        }
         for fault in ["budget-after-selection", "write-rejected", "restore-rejected"] {
             let view = NSTextView(frame: NSRect(x: 0, y: 0, width: 500, height: 150))
             view.string = "prefix lkz"

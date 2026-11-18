@@ -22,6 +22,18 @@ func lexicalPunctuationChecks(dictionary: LocalDictionary) -> Int {
             AutoCorrection.detect(text, recognizes: dictionary.recognizes,
                 recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, settings: settings, convert: convert)?.text
         }
+        for (open, close) in [("„", "“"), ("‚", "‘")] {
+            for (input, word) in [("ghbdtn", "привет"), ("руддщ", "hello"), ("приdtт", "привет")] {
+                expect(detect(open + input + close), open + word + close, id + " paired quotes")
+                expect(detect(open + word + close), nil, id + " correct quoted word")
+                var settings = CorrectionSettings(); settings.excludedWords = [word]
+                expect(detect(open + input + close, settings: settings), nil, id + " quoted exclusion")
+            }
+        }
+        for word in ["отношению", "рождению", "свиданию", "для", "их", "в", "к"] {
+            expect(detect(russian.convert(word, to: english)), word, id + " reviewed whole word " + word)
+            expect(detect(word), nil, id + " preserve source " + word)
+        }
         // A real inflection (конечною) must not consume one literal ellipsis dot.
         for (input, expected) in [("rjytxyj...", "конечно..."), ("(rjytxyj)...", "(конечно)..."),
                                   ("кjytxyj...", "конечно..."), ("нt...", "не..."),

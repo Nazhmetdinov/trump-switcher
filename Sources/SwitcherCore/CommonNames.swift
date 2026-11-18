@@ -72,6 +72,7 @@ public enum CommonNames {
     // bypass the normal internal-capital guard; title case needs no exception.
     private static let internalCapitals = words("""
     iPhone iPad iMac MacBook macOS iOS iCloud AirPods OneDrive FaceTime TouchID FaceID
+    AirDrop AirPlay AirTag HomeKit TestRail TypeScript JavaScript LinkedIn
     WhatsApp WeChat YouTube TikTok AliExpress PayPal PlayStation JetBrains
     GitHub GitLab OpenAI ChatGPT DeepSeek Midjourney HuggingFace
     DevOps PowerShell eBPF SwiftUI AppKit TestFlight PyCharm WebStorm IntelliJ GoLand DataGrip RustRover
@@ -80,6 +81,8 @@ public enum CommonNames {
     McDonald McKenzie McCarthy McGregor MacDonald O'Connor O'Brien O'Neill D'Angelo
     """)
     public static func allowsInternalCapitals(_ word: String, _ layout: Layout) -> Bool {
-        layout == .english && internalCapitals.contains(word) && recognizes(word, layout)
+        guard layout == .english else { return false }
+        let spelling = word.contains("’") ? word.replacingOccurrences(of: "’", with: "'") : word
+        return internalCapitals.contains(spelling) && recognizes(spelling, layout)
     }
 }

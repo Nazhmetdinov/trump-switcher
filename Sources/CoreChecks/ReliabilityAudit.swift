@@ -5,6 +5,7 @@ import SwitcherCore
 func runReliabilityAudit() throws {
     let dictionary = LocalDictionary()
     let directory = dictionary.resourceDirectory!
+    let sampleLimit = CommandLine.arguments.contains("--all-samples") ? Int.max : 30
     let en = KeyboardLayoutTable(id: "com.apple.keylayout.ABC")!
     var rows: [[String: Any]] = []
     for id in InputSources.russianIDs {
@@ -23,7 +24,7 @@ func runReliabilityAudit() throws {
             let rejectedSourceEntries = sourceWords.count - words.count
             var exact = 0, preserved = 0, collision = 0, missed = 0, incorrect = 0, changedValid = 0
             var samples: [String: [String]] = [:]
-            func sample(_ key: String, _ value: String) { if samples[key, default: []].count < 30 { samples[key, default: []].append(value) } }
+            func sample(_ key: String, _ value: String) { if samples[key, default: []].count < sampleLimit { samples[key, default: []].append(value) } }
             let started = ProcessInfo.processInfo.systemUptime
             for word in words {
                 let wrong = target == .russian ? ru.convert(word, to: en) : en.convert(word, to: ru)

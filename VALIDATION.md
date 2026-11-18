@@ -1,5 +1,26 @@
 # Trump Switcher verification
 
+## 0.6.53 · build 92 · 2026-11-18
+
+The Apple Silicon build passed 515,643 core checks, 240 native-event checks,
+190 in-process editor/setter checks and 721 configuration checks. The new
+NSTextView cases insert a short word immediately before existing text, apply
+the replacement keys and assert the final text and selection in UTF-16.
+They include a preceding emoji, both language directions and a one-letter word.
+
+The frequency audit uses the packaged 49,999 recognized Russian entries and
+30,000 English entries on each Russian keyboard paired with ABC. For standard
+Russian and Russian PC the EN → RU result was 49,547 exact, 50 valid-source
+collisions and 402 skipped. The previous count was 405 skipped. Three complete
+inflections competed only with a clipped stem ending in a period. Other cases
+include valid punctuation readings and English fragments. Across all three
+layout pairs and both directions the audit recorded zero wrong conversions
+and zero valid-source changes. Reproduce the full list with
+`CoreChecks --audit-vocabulary --all-samples --output report.json`.
+
+Checks ran locally without typing in third-party apps. Intel validation covers
+cross-compilation and packaging. Physical typing on an Intel Mac was not tested.
+
 ## 0.6.52 · build 91: Russian-primary recognition — 2026-10-30
 
 ARM64 release packaging, signature, 240 native-event, 182 in-process editor,

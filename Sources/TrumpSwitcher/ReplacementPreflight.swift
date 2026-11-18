@@ -23,6 +23,7 @@ enum ReplacementPreflight {
         let afterCaret: String?
         var prefersSelectionReplacement = false
         var ownSelectionWaits = 0
+        var insertingSpace = false
         func plan(original: String, replacement: String) -> WordReplacementPlan? {
             WordReplacementPlan(original: original, replacement: replacement, selection: selection,
                                 beforeCaret: beforeCaret, afterCaret: afterCaret)
@@ -65,7 +66,7 @@ enum ReplacementPreflight {
                       expectedOpaqueFocus: AXUIElement? = nil, cancellation: Cancellation? = nil,
                       deadline absoluteDeadline: TimeInterval? = nil,
                       pinnedOpaqueContext: OpaqueContext? = nil,
-                      previousSelection: SelectionProgress? = nil) -> Result {
+                      previousSelection: SelectionProgress? = nil, insertingSpace: Bool = false) -> Result {
         // Read the current focus again at a proposed edit. Background metadata
         // can be one key/field behind; never act on that stale element.
         var element = pinnedOpaqueContext?.resolvedField == true ? pinnedOpaqueContext?.element : expectedField
@@ -146,7 +147,7 @@ enum ReplacementPreflight {
             guard let element else { return .changed("Редактор не предоставил поле ввода") }
             let result = checkCurrent(original: original, element: element,
                                       budget: deadline - ProcessInfo.processInfo.systemUptime, cancellation: cancellation,
-                                      probeSelectionReplacement: true, previousSelection: ownedSelection)
+                                      probeSelectionReplacement: true, previousSelection: ownedSelection, insertingSpace: insertingSpace)
             switch result {
             case .matches(var context):
                 context.ownSelectionWaits = ownSelectionWaits
@@ -192,7 +193,7 @@ enum ReplacementPreflight {
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid,
               case .field(let current) = DirectWordReplacement.resolveFocus(pid: pid, budget: 0.025),
               CFEqual(current, context.element),
-              case .matches(let fresh) = checkCurrent(original: original, element: current) else { return false }
+              case .matches(let fresh) = checkCurrent(original: original, element: current, insertingSpace: context.insertingSpace) else { return false }
         return fresh.selection == context.selection && fresh.beforeCaret == context.beforeCaret &&
                fresh.afterCaret == context.afterCaret
     }
@@ -391,7 +392,7 @@ enum ReplacementPreflight {
     private static func checkCurrent(original: String, element: AXUIElement, budget: TimeInterval = 0.03,
                                      cancellation: Cancellation? = nil,
                                      probeSelectionReplacement: Bool = false,
-                                     previousSelection: SelectionProgress? = nil) -> CheckResult {
+                                     previousSelection: SelectionProgress? = nil, insertingSpace: Bool = false) -> CheckResult {
         guard cancellation?.isActive != false else { return .reject("Проверка отменена") }
         guard !original.isEmpty, original.utf16.count <= 128 else { return .reject("Недопустимая длина проверяемого слова") }
         guard budget > 0 else { return .retry("Истёк срок проверки слова") }
@@ -464,10 +465,11 @@ enum ReplacementPreflight {
         let offset = selection.location - start
         var context = Context(element: element, selection: NSRange(location: selection.location, length: selection.length),
             beforeCaret: ns.substring(to: offset), afterCaret: extra == 1 ? ns.substring(from: offset) : nil)
+        context.insertingSpace = insertingSpace
         let textMatches = ReplacementContext.matches(original: original, beforeCaret: context.beforeCaret,
-            afterCaret: context.afterCaret, selectionLength: selection.length) ||
+            afterCaret: context.afterCaret, selectionLength: selection.length, insertingSpace: insertingSpace) ||
             EditorCapitalizationAdjustment.verifiedOriginal(original: original, beforeCaret: context.beforeCaret,
-                afterCaret: context.afterCaret, selectionLength: selection.length) != nil
+                afterCaret: context.afterCaret, selectionLength: selection.length, insertingSpace: insertingSpace) != nil
         guard textMatches else { return .retry("Редактор не подтвердил набранное слово до срока ожидания") }
         if probeSelectionReplacement {
             switch keyboardReplacementMode(element, deadline: deadline, cancellation: cancellation) {

@@ -10,6 +10,11 @@ public enum ReviewedVocabulary {
     }
 
     public static let russianNames = words("""
+    наиля наили наилю наилей
+    гульфия гульфии гульфию гульфией
+    ильшат ильшата ильшату ильшатом ильшате
+    айсылу лейсан
+
     айдар айдара айдару айдаром айдаре айрат айрата айрату айратом айрате
     азат азата азату азатом азате алсу айгуль айгулью
     гульнара гульнары гульнаре гульнару гульнарой
@@ -110,6 +115,9 @@ public enum ReviewedVocabulary {
     """)
 
     public static let russianBrands = words("""
+    эйрдроп эйрдропа эйрдропу эйрдропом эйрдропе
+    эйрподсы эйрподсов эйрподсам эйрподсами эйрподсах
+
     дипсик дипсика дипсику дипсиком дипсике
     перплексити джемини грок грока гроку гроком гроке
     клода клоду клодом клоде
@@ -153,6 +161,8 @@ public enum ReviewedVocabulary {
     """)
 
     public static let englishBrands = words("""
+    airdrop airplay airtag homekit testrail typescript javascript linkedin mattermost
+
     samsung xiaomi huawei honor lenovo asus acer dell logitech rapoo razer
     nvidia radeon geforce qualcomm snapdragon mediatek broadcom realtek
     playstation xbox nintendo steam epicgames ubisoft minecraft roblox fortnite
@@ -181,6 +191,12 @@ public enum ReviewedVocabulary {
     """)
 
     public static let russianColloquial = words("""
+    войс войса войсу войсом войсе войсы войсов войсам войсами войсах
+    голосовуха голосовухи голосовухе голосовуху голосовухой голосовух голосовухам голосовухами голосовухах
+    запинить запинил запинила запинили
+    расшарить расшарил расшарила расшарили шэрить шэрил шэрила шэрили
+    мьютиться замьютить замьютил замьютила замьютили размьютить
+
     нейронка нейронки нейронке нейронку нейронкой нейронок нейронками
     нейросетка нейросетки нейросетке нейросетку нейросеткой
     промптить промптил промптила промптили запромптить
@@ -252,6 +268,8 @@ public enum ReviewedVocabulary {
     """)
 
     public static let englishColloquial = words("""
+    cooldown cooldowns voiceover voiceovers screenshare screenshares screensharing
+
     lol lmao rofl brb btw imho tbh fyi asap afaik idk irl tldr
     cringe cringey cringeworthy chill chilling chillin vibes vibing lowkey highkey
     doomscroll doomscrolling meme memes memeing repost reposts reposted reblog reblogs

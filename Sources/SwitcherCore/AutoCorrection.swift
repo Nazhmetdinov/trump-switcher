@@ -22,8 +22,12 @@ public struct AutoCorrection {
         "a", "i", "to", "of", "in", "is", "it", "he", "we", "be", "by", "at", "an", "as", "am",
         "on", "or", "so", "if", "do", "no", "up", "us", "me", "my", "go", "oh", "ok", "hi"
     ]
+    // Subtitle entries include these clipped stems. As bare source text they
+    // remain protected. With a final period key the complete inflection wins
+    // only over its own clipped stem, with no third candidate.
+    private static let reviewedFinalYu: Set<String> = ["отношению", "рождению", "свиданию"]
     private static let opening = Set("([{'\"«“‘„‚")
-    private static let closing = Set(".,!?;:)]}'\"»”’…—–")
+    private static let closing = Set("“‘.,!?;:)]}'\"»”’…—–")
     public static func isWordSeparator(_ text: String) -> Bool {
         text.unicodeScalars.count == 1 && text.unicodeScalars.first?.properties.generalCategory == .spaceSeparator
     }
@@ -376,6 +380,11 @@ public struct AutoCorrection {
                     if preferred.count == 1, let answer = preferred.keys.first { answers = [answer] }
                 }
             }
+        }
+        if target == .russian, token.last == ".", answers.count == 2,
+           reviewedFinalYu.contains(russianCandidate.lowercased()), wholeWordAnswers.contains(russianCandidate),
+           answers.contains(String(russianCandidate.dropLast()) + ".") {
+            answers = [russianCandidate]
         }
         guard answers.count == 1, let answer = answers.first, answer != token else { return nil }
         let answerLetters = String(answer.filter(\.isLetter)).lowercased()

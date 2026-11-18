@@ -63,20 +63,21 @@ func reviewedVocabularyChecks(dictionary: LocalDictionary) -> Int {
                 expect(exact > words.count, "more than half of bare case variants correct on \(russianID)")
                 print("Reviewed corpus \(layout) \(russianID)/\(englishID): \(words.count) entries, \(exact) exact / \(ambiguous) skipped or ambiguous bare spellings")
             }
-            for brand in ["iPhone", "ChatGPT", "GitHub", "PlayStation", "JetBrains", "PyCharm", "NumPy", "PyTorch", "ClickHouse", "FastAPI",
-                          "McDonald", "O'Connor", "O'Brien"] {
+            for brand in ["AirDrop", "AirPlay", "AirTag", "HomeKit", "TestRail", "TypeScript", "JavaScript", "LinkedIn", "iPhone", "ChatGPT", "GitHub", "PlayStation", "JetBrains", "PyCharm", "NumPy", "PyTorch", "ClickHouse", "FastAPI",
+                          "McDonald", "O'Connor", "O'Brien", "O’Connor", "O’Brien"] {
                 let wrong = english.convert(brand, to: russian)
                 let result = detect(wrong)
                 expect(result == brand, "canonical brand capitals: \(brand), \(russianID)")
             }
-            for identifier in ["jOhN", "sVeLtE", "iPhOnE", "maXim", "телеГрам"] {
+            for identifier in ["aIrDrop", "JavaSCript", "jOhN", "sVeLtE", "iPhOnE", "maXim", "телеГрам"] {
                 let wrong = identifier.first?.isASCII == true ? english.convert(identifier, to: russian) : russian.convert(identifier, to: english)
                 expect(detect(wrong) == nil, "name list must not license arbitrary internal capitals: \(identifier)")
             }
             for source in ["fooBar", "user_name", "GPT-4o", "https://github.com/test", "person@example.com", "И.О.", "Иванов123", "hello-мир"] {
                 expect(detect(source) == nil, "identifier/address/intentional mixed token unchanged: \(source)")
             }
-            for (word, target) in [("нейронка", Layout.russian), ("задеплоили", .russian), ("Артём", .russian), ("Алексеевна", .russian),
+            for (word, target) in [("нейронка", Layout.russian), ("войсами", .russian), ("голосовуху", .russian),
+                                   ("запинить", .russian), ("расшарили", .russian), ("шэрить", .russian), ("задеплоили", .russian), ("Артём", .russian), ("Алексеевна", .russian),
                                    ("cloudflare", .english), ("Kubernetes", .english), ("Jessica", .english), ("refactoring", .english)] {
                 let wrong = target == .russian ? russian.convert(word, to: english) : english.convert(word, to: russian)
                 // Phonetic can produce genuine source-language words. Such

@@ -409,7 +409,7 @@ final class AutoMonitor {
         guard type == .keyDown else {
             if [.scrollWheel, .mouseMoved, .leftMouseUp, .rightMouseUp, .otherMouseUp,
                 .leftMouseDragged, .rightMouseDragged, .otherMouseDragged].contains(type) { return true }
-            buffer.reset()
+            buffer.beginAtMovedCaret()
             invalidateFocus()
             return true
         }
@@ -609,7 +609,7 @@ final class AutoMonitor {
                 }
                 return ReplacementPreflight.check(original: original, pid: destinationPID, expectedField: field,
                                                   expectedOpaqueFocus: opaque, cancellation: cancellation, deadline: deadline,
-                                                  pinnedOpaqueContext: pinnedOpaque, previousSelection: previousSelection)
+                                                  pinnedOpaqueContext: pinnedOpaque, previousSelection: previousSelection, insertingSpace: isSpace)
             }) { [self] preflight in
             defer { longestDecisionMS = max(longestDecisionMS, (ProcessInfo.processInfo.systemUptime - started) * 1000) }
             let transactionID = pendingBoundary?.id
@@ -628,12 +628,12 @@ final class AutoMonitor {
                 ownSelectionWaits += context.ownSelectionWaits
                 if let observed = EditorCapitalizationAdjustment.verifiedOriginal(original: original,
                     beforeCaret: context.beforeCaret, afterCaret: context.afterCaret,
-                    selectionLength: context.selection.length) {
+                    selectionLength: context.selection.length, insertingSpace: isSpace) {
                     observedOriginal = observed
                     if !correction.preservesExactCase {
                         guard let adjustment = EditorCapitalizationAdjustment.verified(original: original,
                             replacement: correction.text, beforeCaret: context.beforeCaret,
-                            afterCaret: context.afterCaret, selectionLength: context.selection.length),
+                            afterCaret: context.afterCaret, selectionLength: context.selection.length, insertingSpace: isSpace),
                               var adjustedKeys = KeyboardReplacement.keys(original: observed, corrected: adjustment.replacement,
                                 layout: correction.layout, appendSpace: false,
                                 keyProvider: { text, _ in replacementTable.replacement(text) }) else {
@@ -847,7 +847,10 @@ final class AutoMonitor {
         if [kVK_Tab, kVK_Return, kVK_ANSI_KeypadEnter, kVK_Escape, kVK_LeftArrow, kVK_RightArrow,
             kVK_UpArrow, kVK_DownArrow, kVK_Home, kVK_End, kVK_PageUp, kVK_PageDown,
             kVK_ForwardDelete].contains(Int(key)) {
-            buffer.reset(startOfWord: false)
+            if [kVK_LeftArrow, kVK_RightArrow, kVK_UpArrow, kVK_DownArrow, kVK_Home, kVK_End,
+                kVK_PageUp, kVK_PageDown].contains(Int(key)) {
+                buffer.beginAtMovedCaret()
+            } else { buffer.reset(startOfWord: false) }
             if key == Int64(kVK_Tab) { invalidateFocus() }
             if key == Int64(kVK_Return) || key == Int64(kVK_ANSI_KeypadEnter) { buffer.reset() }
             return true

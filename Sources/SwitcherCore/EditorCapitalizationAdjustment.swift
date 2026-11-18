@@ -10,22 +10,22 @@ public struct EditorCapitalizationAdjustment: Equatable {
     /// A source-only check for the read-only preflight. Its result must also be
     /// the exact source used by the final focus/caret revalidation at write time.
     public static func verifiedOriginal(original: String, beforeCaret: String,
-                                        afterCaret: String?, selectionLength: Int) -> String? {
+                                        afterCaret: String?, selectionLength: Int, insertingSpace: Bool = false) -> String? {
         guard (1...128).contains(original.utf16.count), let first = original.first,
               let uppercase = capitalizedLetter(first, requireLowercase: true) else { return nil }
         let observed = uppercase + original.dropFirst()
         guard observed.utf16.count == original.utf16.count,
               ReplacementContext.matches(original: observed, beforeCaret: beforeCaret,
-                                         afterCaret: afterCaret, selectionLength: selectionLength) else { return nil }
+                                         afterCaret: afterCaret, selectionLength: selectionLength, insertingSpace: insertingSpace) else { return nil }
         return observed
     }
 
     /// Apply the verified editor capitalization to an already-approved layout
     /// correction. Explicit user-rule outputs should keep their declared case.
     public static func verified(original: String, replacement: String, beforeCaret: String,
-                                afterCaret: String?, selectionLength: Int) -> Self? {
+                                afterCaret: String?, selectionLength: Int, insertingSpace: Bool = false) -> Self? {
         guard let observed = verifiedOriginal(original: original, beforeCaret: beforeCaret,
-                                             afterCaret: afterCaret, selectionLength: selectionLength),
+                                             afterCaret: afterCaret, selectionLength: selectionLength, insertingSpace: insertingSpace),
               (1...128).contains(replacement.utf16.count), let first = replacement.first,
               let uppercase = capitalizedLetter(first, requireLowercase: false) else { return nil }
         let adjusted = uppercase + replacement.dropFirst()

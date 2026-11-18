@@ -1,5 +1,11 @@
 # История изменений / Changelog
 
+## 0.6.53 · build 92 · 2026-11-18
+
+- При вставке слова перед существующим текстом нажатый пробел теперь учитывается как граница. Например, `lkz` и пробел перед «работы» дают «для работы». После перемещения курсора стрелкой проверяется первое целое слово.
+- Добавлены имена, бренды и разговорные формы, в том числе «Ильшат», «войсами», «расшарить», AirDrop и TypeScript. Распознаются слова в парных кавычках „…“ и ‚…‘.
+- Из 405 пропусков обычной русской раскладки восстановлены три формы с конечной «ю». Для сочетаний с двумя осмысленными прочтениями, например «ночью» и «ночь.», сохранён выбор пользователя.
+
 ## 0.6.52 · build 91 · 2026-10-30
 
 - Добавлен включаемый режим «Русский — основной язык»: одиночные F/B/D/R могут исправляться в А/И/В/К. Настоящие английские слова, a/I, установившийся английский контекст, исключения и отключённые направления сохраняют приоритет. Старые настройки автоматически не меняются.
@@ -143,6 +149,12 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.53 · build 92 · 2026-11-18
+
+- A space typed immediately before an existing word now separates it from the word being corrected. Arrow-key navigation permits correction of the first complete word after the move when the editor confirms the text.
+- Expanded local coverage of names, brands and slang, including AirDrop, TypeScript and inflected Russian forms. Recognition now handles paired low quotation marks.
+- Reviewed 405 skipped Russian spellings and recovered three inflections ending in ю. Ambiguous word and punctuation readings still require manual conversion.
 
 ## 0.6.52 · build 91 · 2026-10-30
 

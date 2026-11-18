@@ -25,6 +25,12 @@ public struct TypingBuffer {
         wholeSelection = false
         requiresVerifiedText = false
     }
+    /// Navigation starts a new capture at an unknown caret. An editor that
+    /// cannot verify the entire left range must pass the original input.
+    public mutating func beginAtMovedCaret() {
+        reset()
+        requiresVerifiedText = true
+    }
     /// Retain all captured characters after a late activation, but authorize
     /// correction only if the editor confirms that exact complete token.
     public mutating func requireVerifiedText() {
