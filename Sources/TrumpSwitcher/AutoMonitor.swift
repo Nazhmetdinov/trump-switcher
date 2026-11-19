@@ -409,7 +409,7 @@ final class AutoMonitor {
         guard type == .keyDown else {
             if [.scrollWheel, .mouseMoved, .leftMouseUp, .rightMouseUp, .otherMouseUp,
                 .leftMouseDragged, .rightMouseDragged, .otherMouseDragged].contains(type) { return true }
-            buffer.beginAtMovedCaret()
+            buffer.beginAtMovedCaret(afterClick: true)
             invalidateFocus()
             return true
         }
@@ -446,8 +446,11 @@ final class AutoMonitor {
             return true
         }
         if NSWorkspace.shared.frontmostApplication?.processIdentifier != pid { refreshContext() }
+        let shortcut = TypingShortcut.action(code: UInt16(clamping: key), command: event.flags.contains(.maskCommand),
+            control: event.flags.contains(.maskControl), option: event.flags.contains(.maskAlternate), shift: event.flags.contains(.maskShift),
+            function: event.flags.contains(.maskSecondaryFn))
         var secure = IsSecureEventInputEnabled()
-        if !secure, permission.requiresKeyProbe, NSWorkspace.shared.frontmostApplication?.processIdentifier == pid {
+        if !secure, permission.requiresKeyProbe(buffer: buffer, shortcut: shortcut), NSWorkspace.shared.frontmostApplication?.processIdentifier == pid {
             // Usually the background probe finishes before typing. If a first
             // key beats it, resolve safety once instead of dropping a whole word.
             // Invalidate the older in-flight result so it cannot overwrite this one.
@@ -464,9 +467,7 @@ final class AutoMonitor {
                 (NSWorkspace.shared.frontmostApplication?.processIdentifier != pid ? "Смена приложения" : "Сочетание с модификатором"))
             return true
         }
-        if let shortcut = TypingShortcut.action(code: UInt16(clamping: key), command: event.flags.contains(.maskCommand),
-            control: event.flags.contains(.maskControl), option: event.flags.contains(.maskAlternate), shift: event.flags.contains(.maskShift),
-            function: event.flags.contains(.maskSecondaryFn)) {
+        if let shortcut {
             shortcut.apply(to: &buffer)
             typingLanguage = nil
             if shortcut == .invalidate, key == Int64(kVK_Tab), event.flags.contains(.maskCommand),
@@ -511,8 +512,9 @@ final class AutoMonitor {
         let isAddressBoundary = [kVK_Return, kVK_ANSI_KeypadEnter, kVK_Tab].contains(Int(key))
         let text = printableText(event, key: key, currentTable: currentTable, currentID: currentID)
         let targetLayout: Layout = currentLayout == .russian ? .english : .russian
-        let punctuationTable = settings.punctuation && text?.contains(where: { !$0.isLetter && !$0.isNumber }) == true
-            ? InputSources.sourceID(for: targetLayout).flatMap { keyboard.table($0) } : nil
+        lazy var otherTable = InputSources.sourceID(for: targetLayout, currentID: currentID).flatMap { keyboard.table($0) }
+        let punctuationTable = !isSpace && !isAddressBoundary && settings.punctuation && text?.contains(where: { !$0.isLetter && !$0.isNumber }) == true
+            ? otherTable : nil
         let ordinaryPunctuation = text.flatMap { value in punctuationTable.map {
             WordBoundary.isImmediate(value, mapped: currentTable.convert(value, to: $0),
                                      token: buffer.token, mappedToken: currentTable.convert(buffer.token, to: $0))
@@ -560,7 +562,6 @@ final class AutoMonitor {
             guard !awaitingContext else { decisionStatus = "Проверка безопасности нового поля ещё не завершена"; return true }
             let started = ProcessInfo.processInfo.systemUptime
             // Resolve target/source tables once per word, not once per character.
-            let otherTable = InputSources.sourceID(for: targetLayout).flatMap { keyboard.table($0) }
             guard let correction = ellipsisCorrection ?? detect(token, otherTable: otherTable) else {
                 unchangedWords += 1
                 decisionStatus = "Словарь: исправление не требуется / неоднозначно · \(token.count) символов"
@@ -650,7 +651,7 @@ final class AutoMonitor {
                 changedEditorWords += 1; decisionStatus = reason; return .pass
             case .unavailable(let context):
                 guard !requiresCompleteWordVerification else {
-                    decisionStatus = "После смены окна редактор не подтвердил целое слово; замена пропущена"
+                    decisionStatus = "Редактор не подтвердил целое слово после перемещения курсора или смены поля"
                     return .pass
                 }
                 if let pinned = pendingBoundary?.pinnedOpaqueContext,
@@ -844,13 +845,8 @@ final class AutoMonitor {
             return passBoundary
         }
         if key == Int64(kVK_Delete) { buffer.backspace(); return true }
-        if [kVK_Tab, kVK_Return, kVK_ANSI_KeypadEnter, kVK_Escape, kVK_LeftArrow, kVK_RightArrow,
-            kVK_UpArrow, kVK_DownArrow, kVK_Home, kVK_End, kVK_PageUp, kVK_PageDown,
-            kVK_ForwardDelete].contains(Int(key)) {
-            if [kVK_LeftArrow, kVK_RightArrow, kVK_UpArrow, kVK_DownArrow, kVK_Home, kVK_End,
-                kVK_PageUp, kVK_PageDown].contains(Int(key)) {
-                buffer.beginAtMovedCaret()
-            } else { buffer.reset(startOfWord: false) }
+        if [kVK_Tab, kVK_Return, kVK_ANSI_KeypadEnter, kVK_Escape, kVK_ForwardDelete].contains(Int(key)) {
+            buffer.reset(startOfWord: false)
             if key == Int64(kVK_Tab) { invalidateFocus() }
             if key == Int64(kVK_Return) || key == Int64(kVK_ANSI_KeypadEnter) { buffer.reset() }
             return true
@@ -1683,15 +1679,17 @@ final class AutoMonitor {
             if actualFieldChanged {
                 typingLanguage = nil
                 recentSelectionProgress = nil
-                if hasPendingInput, FocusTracking.shouldCancelInput(
+                let wasPending = hasPendingInput
+                if wasPending, FocusTracking.shouldCancelInput(
                     previousRole: focusedRole, nextRole: snapshot.role,
                     identityChanged: changed, sameIdentifiedField: sameIdentifiedField,
                     sameCapturedField: sameField,
                     phase: pendingBoundary == nil ? .delivering : .deciding) { cancel() }
                 // Equal geometry may be wrapper churn in the same editor;
                 // retain that prefix only for exact whole-word verification.
-                // A distinct identity starts a fresh word on the first key.
-                if !sameField { buffer.reset() }
+                if !sameField {
+                    buffer.adoptDifferentField(resolvingClick: focusResetPending && !wasPending)
+                }
             }
             // Mouse/Tab/app changes already reset the stream. Transient AXWindow/
             // AXGroup wrappers are not a new text field on every typing hint.

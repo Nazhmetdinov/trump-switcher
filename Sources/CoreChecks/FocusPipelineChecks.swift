@@ -33,7 +33,8 @@ func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
         var source = "com.apple.keylayout.ABC"
         var committedDelivery = false
     }
-    func focus(_ model: inout Model, field: Int, wrapper: Int, identity: String) {
+    func focus(_ model: inout Model, field: Int, wrapper: Int, identity: String, settling: Bool = false) {
+        let wasPending = model.committedDelivery
         let changed = FocusTracking.changed(previousIdentity: model.identity, nextIdentity: identity,
             previousRole: model.role, nextRole: model.role, sameElement: model.wrapper == wrapper)
         let sameLogical = model.identity == identity
@@ -51,10 +52,10 @@ func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
                 model.buffer.reset(startOfWord: false)
                 model.committedDelivery = false
             }
-            if !sameLogical { model.buffer.reset() }
+            if !sameLogical { model.buffer.adoptDifferentField(resolvingClick: settling && !wasPending) }
         }
         if FocusTracking.shouldReset(previousRole: model.role, nextRole: model.role,
-            identityChanged: changed, alreadyReset: false, sameLogicalField: sameLogical) {
+            identityChanged: changed, alreadyReset: settling, sameLogicalField: sameLogical) {
             model.buffer.invalidatePartialWord()
         }
         model.active = field
@@ -139,6 +140,35 @@ func focusPipelineChecks(dictionary: LocalDictionary) -> Int {
         expect(!boundary(&twice, " ") && twice.fields[0].text == expected + "  " && twice.fields[0].writes == 1,
                "second space triggered duplicate correction or disappeared")
     }
+    for word in expectedWords.keys.sorted() {
+        for split in 0...word.count {
+            context = "post-click delayed focus at \(split) of \(word)"
+            var moved = Model()
+            type(&moved, "old")
+            moved.active = 1 // the actual click is delivered before the focus hint
+            moved.buffer.beginAtMovedCaret(afterClick: true)
+            type(&moved, String(word.prefix(split)))
+            focus(&moved, field: 1, wrapper: 2, identity: "AXTextArea/id/new", settling: true)
+            type(&moved, String(word.dropFirst(split)))
+            expect(moved.buffer.requiresVerifiedText, "delayed adoption requires an exact range")
+            expect(boundary(&moved, " "), "late click hint lost the first word")
+            expect(moved.fields[0].text == "old" && moved.fields[0].writes == 0, "the former field was edited")
+        }
+    }
+    for (settling, pending) in [(false, false), (true, true)] {
+        var moved = Model()
+        moved.buffer.beginAtMovedCaret(afterClick: true)
+        type(&moved, "lk")
+        moved.committedDelivery = pending
+        focus(&moved, field: 1, wrapper: 2, identity: "AXTextArea/id/new", settling: settling)
+        expect(moved.buffer.token.isEmpty, "old or in-flight input cannot cross a field change")
+    }
+    var once = TypingBuffer()
+    once.beginAtMovedCaret(afterClick: true)
+    once.append("d")
+    once.adoptDifferentField(resolvingClick: true)
+    once.adoptDifferentField(resolvingClick: true)
+    expect(once.token.isEmpty && once.requiresVerifiedText, "a click cannot carry input across a second field change")
     context = "stable ID wrapper churn"
     var same = Model()
     type(&same, "l")

@@ -13,6 +13,15 @@ func wordBoundaryChecks(dictionary: LocalDictionary) -> Int {
             print("Boundary regression: \(name): actual=\(actual.debugDescription), expected=\(expected.debugDescription)")
         }
     }
+    var mappedWords = 0
+    func mappedWord() -> String { mappedWords += 1; return "привет" }
+    for (key, mapped) in [(" ", " "), (",", "б"), ("’", "’"), ("(", "(")] {
+        let immediate = WordBoundary.isImmediate(key, mapped: mapped, token: "ghbdtn", mappedToken: mappedWord())
+        expect(String(immediate), "false", "deferred punctuation " + key)
+    }
+    expect(String(mappedWords), "0", "deferred keys do not translate the buffered word")
+    let immediate = WordBoundary.isImmediate("!", mapped: "!", token: "ghbdtn", mappedToken: mappedWord())
+    expect(String(immediate && mappedWords == 1), "true", "ordinary punctuation still checks the other layout")
     let english = KeyboardLayoutTable(id: "com.apple.keylayout.ABC")!
     for russianID in InputSources.russianIDs {
         let russian = KeyboardLayoutTable(id: russianID)!

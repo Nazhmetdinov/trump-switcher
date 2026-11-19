@@ -11,14 +11,14 @@ public struct WordReplacementPlan {
     public let resultSelection: NSRange
 
     public init?(original: String, replacement: String, selection: NSRange,
-                 beforeCaret: String, afterCaret: String?) {
+                 beforeCaret: String, afterCaret: String?, insertingSpace: Bool = false) {
         let length = original.utf16.count
         guard (1...128).contains(length), (1...128).contains(replacement.utf16.count),
               original != replacement, selection.location != NSNotFound,
               selection.location >= length, selection.length == 0,
               selection.location <= Int.max - replacement.utf16.count,
               ReplacementContext.matches(original: original, beforeCaret: beforeCaret,
-                  afterCaret: afterCaret, selectionLength: selection.length) else { return nil }
+                  afterCaret: afterCaret, selectionLength: selection.length, insertingSpace: insertingSpace) else { return nil }
         self.original = original; self.replacement = replacement
         initialSelection = selection
         target = NSRange(location: selection.location - length, length: length)

@@ -12,15 +12,32 @@ func lexicalPunctuationChecks(dictionary: LocalDictionary) -> Int {
             print("Lexical punctuation regression: \(reason): actual=\(actual.debugDescription), expected=\(expected.debugDescription)")
         }
     }
-    let english = KeyboardLayoutTable(id: "com.apple.keylayout.ABC")!
-    for id in ["com.apple.keylayout.Russian", "com.apple.keylayout.RussianWin"] {
-        let russian = KeyboardLayoutTable(id: id)!
+    // Apple USB Pro F16 ANSI and ISO types, independent of the build Mac.
+    let pairs: [(String, UInt32)] = ["com.apple.keylayout.Russian", "com.apple.keylayout.RussianWin"].flatMap { id in
+        [UInt32(34), UInt32(35)].map { (id, $0) }
+    }
+    for (sourceID, type) in pairs {
+        let english = KeyboardLayoutTable(id: "com.apple.keylayout.ABC", keyboardType: type)!
+        let russian = KeyboardLayoutTable(id: sourceID, keyboardType: type)!
+        let id = "\(sourceID)/\(type)"
         let convert: (String, Layout) -> String = { text, target in
             target == .russian ? english.convert(text, to: russian) : russian.convert(text, to: english)
         }
         func detect(_ text: String, settings: CorrectionSettings = CorrectionSettings()) -> String? {
             AutoCorrection.detect(text, recognizes: dictionary.recognizes,
                 recognizesFragment: dictionary.recognizesCommon, recognizesBackoff: dictionary.recognizesBackoff, settings: settings, convert: convert)?.text
+        }
+        // The ё key differs between Apple Russian and Russian PC and
+        // between ISO/ANSI positions. A layout change after that key must
+        // still allow resolution of the complete mixed token.
+        for letter in ["ё", "Ё"] {
+            let key = russian.convert(letter, to: english)
+            expect(english.convert(key, to: russian), letter, id + " physical ё key round trip")
+            let token = key + "жик"
+            expect(detect(token), letter + "жик", id + " physical mixed ё key " + key)
+            var disabled = CorrectionSettings(); disabled.toRussian = false
+            expect(detect(token, settings: disabled), nil, id + " mixed ё respects direction")
+            expect(detect(key + "жик42"), nil, id + " mixed ё leaves identifiers unchanged")
         }
         for (open, close) in [("„", "“"), ("‚", "‘")] {
             for (input, word) in [("ghbdtn", "привет"), ("руддщ", "hello"), ("приdtт", "привет")] {

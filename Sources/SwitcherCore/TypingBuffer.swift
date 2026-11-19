@@ -5,12 +5,17 @@ public struct TypingBuffer {
     public private(set) var token = ""
     private var accepting = true
     private var wholeSelection = false
+    private var awaitingClickFocus = false
     public private(set) var requiresVerifiedText = false
     public var isAccepting: Bool { accepting }
     public var isAtWordBoundary: Bool { accepting && token.isEmpty }
     public func afterCancellation(preserveEmptyBoundary: Bool = false) -> TypingBuffer {
         var result = TypingBuffer()
-        result.reset(startOfWord: preserveEmptyBoundary && isAtWordBoundary)
+        if preserveEmptyBoundary && isAtWordBoundary && requiresVerifiedText {
+            result.beginAtMovedCaret(afterClick: awaitingClickFocus)
+        } else {
+            result.reset(startOfWord: preserveEmptyBoundary && isAtWordBoundary)
+        }
         return result
     }
     /// Rejected text must never become a partial correction. A literal Space,
@@ -23,13 +28,27 @@ public struct TypingBuffer {
         token = ""
         accepting = startOfWord
         wholeSelection = false
+        awaitingClickFocus = false
         requiresVerifiedText = false
     }
     /// Navigation starts a new capture at an unknown caret. An editor that
     /// cannot verify the entire left range must pass the original input.
-    public mutating func beginAtMovedCaret() {
+    public mutating func beginAtMovedCaret(afterClick: Bool = false) {
         reset()
         requiresVerifiedText = true
+        awaitingClickFocus = afterClick
+    }
+    /// AX can report the previous field after mouse-down while keys are
+    /// already reaching the clicked field. A single delayed adoption can
+    /// keep only those post-click keys, with mandatory whole-word proof.
+    public mutating func adoptDifferentField(resolvingClick: Bool) {
+        if resolvingClick && awaitingClickFocus {
+            awaitingClickFocus = false
+        } else if !isAtWordBoundary || requiresVerifiedText {
+            beginAtMovedCaret()
+        } else {
+            reset()
+        }
     }
     /// Retain all captured characters after a late activation, but authorize
     /// correction only if the editor confirms that exact complete token.
@@ -40,7 +59,8 @@ public struct TypingBuffer {
     /// A metadata change is not a missed key. Preserve a known empty word
     /// boundary, but never resume a partial token or one with rejected input.
     public mutating func invalidatePartialWord() {
-        reset(startOfWord: token.isEmpty && accepting)
+        if isAtWordBoundary && requiresVerifiedText { return }
+        reset(startOfWord: isAtWordBoundary)
     }
     /// Cmd+A followed by typing/deletion replaces the selected prefix completely.
     public mutating func selectAll() { reset(); wholeSelection = true }
@@ -88,17 +108,18 @@ public struct ReplacementKey {
     public let text: String?
 }
 public enum KeyboardReplacement {
+    private static let codes: [Character: UInt16] = [
+        "a":0,"s":1,"d":2,"f":3,"h":4,"g":5,"z":6,"x":7,"c":8,"v":9,"b":11,
+        "q":12,"w":13,"e":14,"r":15,"y":16,"t":17,"1":18,"2":19,"3":20,
+        "4":21,"6":22,"5":23,"=":24,"9":25,"7":26,"-":27,"8":28,"0":29,
+        "]":30,"o":31,"u":32,"[":33,"i":34,"p":35,"l":37,"j":38,"'":39,
+        "k":40,";":41,"\\":42,",":43,"/":44,"n":45,"m":46,".":47,"`":50
+    ]
+    private static let shifted = Dictionary(uniqueKeysWithValues: zip(Array("~!@#$%^&*()_+{}|:\"<>?"), Array("`1234567890-=[]\\;',./")))
+
     public static func keys(original: String, corrected: String, layout: Layout, appendSpace: Bool = true, keyProvider: ((String, Layout) -> ReplacementKey?)? = nil) -> [ReplacementKey]? {
         guard (1...128).contains(original.count), original.utf16.count == original.count,
               (1...128).contains(corrected.count), corrected.utf16.count == corrected.count else { return nil }
-        let codes: [Character: UInt16] = [
-            "a":0,"s":1,"d":2,"f":3,"h":4,"g":5,"z":6,"x":7,"c":8,"v":9,"b":11,
-            "q":12,"w":13,"e":14,"r":15,"y":16,"t":17,"1":18,"2":19,"3":20,
-            "4":21,"6":22,"5":23,"=":24,"9":25,"7":26,"-":27,"8":28,"0":29,
-            "]":30,"o":31,"u":32,"[":33,"i":34,"p":35,"l":37,"j":38,"'":39,
-            "k":40,";":41,"\\":42,",":43,"/":44,"n":45,"m":46,".":47,"`":50
-        ]
-        let shifted = Dictionary(uniqueKeysWithValues: zip(Array("~!@#$%^&*()_+{}|:\"<>?"), Array("`1234567890-=[]\\;',./")))
         var typing: [ReplacementKey] = []
         for char in corrected {
             if let keyProvider {

@@ -28,6 +28,7 @@ public struct AutoCorrection {
     private static let reviewedFinalYu: Set<String> = ["отношению", "рождению", "свиданию"]
     private static let opening = Set("([{'\"«“‘„‚")
     private static let closing = Set("“‘.,!?;:)]}'\"»”’…—–")
+    private static let matchingClosers: [Character: Character] = ["(": ")", "[": "]", "{": "}", "'": "'", "\"": "\"", "«": "»", "“": "”", "‘": "’", "„": "“", "‚": "‘"]
     public static func isWordSeparator(_ text: String) -> Bool {
         text.unicodeScalars.count == 1 && text.unicodeScalars.first?.properties.generalCategory == .spaceSeparator
     }
@@ -100,7 +101,7 @@ public struct AutoCorrection {
             variants.append(("", String(token.dropLast(suffix.count)), suffix))
             variants.append((prefix, String(token.dropFirst(prefix.count)), ""))
         }
-        if settings.punctuation, prefix.count + suffix.count <= 12 {
+        if settings.punctuation, stem != token, prefix.count + suffix.count <= 12 {
             for leading in 0...prefix.count {
                 for trailing in 0...suffix.count {
                     let before = String(prefix.prefix(leading)), after = String(suffix.suffix(trailing))
@@ -111,7 +112,6 @@ public struct AutoCorrection {
                 }
             }
         }
-        let matchingClosers: [Character: Character] = ["(": ")", "[": "]", "{": "}", "'": "'", "\"": "\"", "«": "»", "“": "”", "‘": "’", "„": "“", "‚": "‘"]
         func permitsLiteralPreference<S: Sequence>(_ values: S) -> Bool where S.Element == String {
             // A longer literal suffix is not evidence for a shorter word:
             // dfkthb.! can be валерию! or валери.!. Wrappers do not remove
@@ -141,13 +141,14 @@ public struct AutoCorrection {
         }
         // A real word wins over an accidental domain in the other layout:
         // валюта -> dfk.nf, июль -> b.km, интересуюсь -> bynthtce.cm.
-        if let direction = Conversion.direction(token) {
+        let tokenDirection = Conversion.direction(token)
+        if let direction = tokenDirection {
             let source: Layout = direction == .russian ? .english : .russian
-            if known(token, layout: source) || known(stem, layout: source) {
+            if known(token, layout: source) || (stem != token && known(stem, layout: source)) {
                 onKnownSource?(source); return nil
             }
             if ShortSourceProtection.recognizes(token, source, establishedLanguage: establishedLanguage) { return nil }
-            if ShortSourceProtection.recognizes(stem, source, establishedLanguage: establishedLanguage) {
+            if stem != token, ShortSourceProtection.recognizes(stem, source, establishedLanguage: establishedLanguage) {
                 // Do not let a stripped short-token guard hide a proved whole
                 // word whose letter lives on a punctuation key: 'dj = эво.
                 // Retain the existing complete-word/punctuation policy here.
@@ -155,7 +156,7 @@ public struct AutoCorrection {
                 if !full.allSatisfy(\.isLetter) || !known(full, layout: direction) { return nil }
             }
         }
-        let literalAddress = isAddress(token) || (settings.punctuation && isAddress(stem))
+        let literalAddress = isAddress(token) || (settings.punctuation && stem != token && isAddress(stem))
         if literalAddress {
             // Bare ASCII "domains" can themselves be a Russian word typed on
             // ABC (dfk.nf). Explicit URL/email syntax is always preserved.
@@ -177,7 +178,7 @@ public struct AutoCorrection {
         }
         let cyrillic = stem.unicodeScalars.contains { (0x410...0x44f).contains($0.value) || $0.value == 0x401 || $0.value == 0x451 }
         let latin = stem.unicodeScalars.contains { (65...90).contains($0.value) || (97...122).contains($0.value) }
-        let letterKeys = "[];'.,`{}:\"<>\\"
+        let letterKeys = "[];'.,`{}:\"<>\\|§±~"
         // A Cyrillic token can end in a letter still encoded on an EN
         // punctuation key (таймве, → таймвеб). Inspect the full token: split()
         // has already removed that comma from stem. Valid source words were
@@ -192,7 +193,7 @@ public struct AutoCorrection {
             let word = settings.punctuation ? split(candidate).1 : candidate
             return word.count == 2 && knownShort(word, .russian)
         }
-        let direction = Conversion.direction(token) ?? (punctuationWord ? Layout.russian : nil)
+        let direction = tokenDirection ?? (punctuationWord ? Layout.russian : nil)
         if direction == nil || partialLayout {
             // Recover a complete mixed-alphabet word only when exactly one
             // complete dictionary/name spelling results. Never guess fragments,
@@ -314,7 +315,7 @@ public struct AutoCorrection {
             return recognizes(word.lowercased(), target)
         }
         for (before, input, after) in variants {
-            let candidate = convert(input, target)
+            let candidate = input == token && target == .russian ? russianCandidate : convert(input, target)
             if accept(candidate, partial: !before.isEmpty || !after.isEmpty) {
                 let answer = before + candidate + after; record(answer, before: before)
                 if before.isEmpty && after.isEmpty { wholeWordAnswers.insert(answer) }

@@ -82,12 +82,44 @@ func reliabilityChecks(dictionary: LocalDictionary) -> Int {
         var focus = FocusPermission()
         focus.begin()
         focus.resolve(false, buffer: &firstWord)
-        expect(focus.requiresKeyProbe, "stale blocked focus is checked on first key, not only a timer")
+        expect(focus.requiresKeyProbe(buffer: firstWord), "stale blocked focus is checked on first key, not only a timer")
         focus.resolve(true, buffer: &firstWord)
-        expect(!focus.requiresKeyProbe, "normal typing does not repeatedly synchronously probe focus")
+        expect(!focus.requiresKeyProbe(buffer: firstWord), "normal typing does not repeatedly synchronously probe focus")
         for ch in input { firstWord.append(String(ch)) }
         expect(firstWord.finishWord().flatMap(detect) == detect(input),
                "first word survives transient non-editable focus: " + input)
+    }
+    // Re-probing every letter of an already rejected word blocked the tap for
+    // up to the AX budget per keystroke, with no chance of a whole-word edit.
+    var rejected = TypingBuffer()
+    var blocked = FocusPermission()
+    blocked.begin()
+    rejected.rejectKey(wordBoundary: false)
+    for _ in 0..<32 {
+        expect(!blocked.requiresKeyProbe(buffer: rejected), "missed prefix never re-enters synchronous AX")
+    }
+    expect(blocked.requiresKeyProbe(buffer: rejected, shortcut: .selectAll), "selection replacement can recover")
+    expect(blocked.requiresKeyProbe(buffer: rejected, shortcut: .moveCaret), "navigation can recover")
+    rejected.rejectKey(wordBoundary: true)
+    expect(blocked.requiresKeyProbe(buffer: rejected), "next complete word probes even before the background timer")
+    for key: UInt16 in [123, 124, 125, 126, 115, 119, 116, 121] {
+        for command in [false, true] {
+            for shift in [false, true] {
+                var moved = TypingBuffer()
+                moved.append("z")
+                let move = TypingShortcut.action(code: key, command: command, control: false, option: false, shift: shift)
+                expect(move == .moveCaret, "navigation opens a verified capture")
+                move?.apply(to: &moved)
+                blocked.resolve(false, buffer: &moved)
+                moved = moved.afterCancellation(preserveEmptyBoundary: true)
+                expect(moved.isAtWordBoundary && moved.requiresVerifiedText,
+                       "transient denial after navigation keeps the whole-word proof requirement")
+                for ch in "lkz" { moved.append(String(ch)) }
+                expect(moved.finishWord().flatMap(detect) == "для", "first word after navigation survives the prefix reset")
+            }
+        }
+        expect(TypingShortcut.action(code: key, command: false, control: true, option: false, shift: false) == .invalidate,
+               "system navigation cannot authorize a new capture")
     }
     for rejectedKey in [false, true] {
         var partial = TypingBuffer()

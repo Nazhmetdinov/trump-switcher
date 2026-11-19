@@ -83,11 +83,19 @@ func layoutCoverageChecks() -> Int {
         }
     }
 
-    let win = russian.first { $0.id == "com.apple.keylayout.RussianWin" }!
-    let abc = english.first { $0.id == "com.apple.keylayout.ABC" }!
-    expect(win.character(code: 50, shift: false, capsLock: false) == "ё", "ANSI RussianWin grave key is ё")
-    expect(win.key(for: "ё")?.code == 50, "ANSI ё outranks duplicate ISO/JIS ё positions")
-    expect(win.convert("ё", to: abc) == "`", "ANSI ё maps to ABC grave, not ISO section sign")
+    // Apple Gestalt.h lists the USB Pro F16 models as 34 (ANSI), 35 (ISO).
+    // UCKeyTranslate chooses different Russian PC pages for these two types.
+    // Check both even when the Mac running the tests has only one keyboard.
+    for (type, grave, yoCode, encodedYo) in [(UInt32(34), "ё", UInt16(50), "`"), (35, "]", 10, "§")] {
+        let win = KeyboardLayoutTable(id: "com.apple.keylayout.RussianWin", keyboardType: type)!
+        let abc = KeyboardLayoutTable(id: "com.apple.keylayout.ABC", keyboardType: type)!
+        expect(win.character(code: 50, shift: false, capsLock: false) == grave, "Russian PC grave key on type \(type)")
+        expect(win.character(code: 10, shift: false, capsLock: false) == "ё", "Russian PC section key on type \(type)")
+        expect(win.key(for: "ё")?.code == yoCode, "prefer ordinary physical key if available")
+        expect(win.replacement("ё")?.code == yoCode, "type ё with the matching physical key")
+        expect(win.convert("ёлка", to: abc) == encodedYo + "krf", "encode ё using the matching ABC key")
+        expect(abc.convert(encodedYo + "krf", to: win) == "ёлка", "decode ё on the same keyboard type")
+    }
     print("Layout coverage: \(checks) checks; \(unambiguousMappings) unique ANSI mappings, " +
           "\(roundTrips) round trips, \(ambiguousGlyphs) duplicate-glyph physical ambiguities excluded")
     return checks

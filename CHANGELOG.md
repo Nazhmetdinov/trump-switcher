@@ -1,5 +1,11 @@
 # История изменений / Changelog
 
+## 0.6.54 · build 93 · 2026-11-19
+
+- Исправлен пропуск первого слова после перехода к началу или концу строки через ⌘ и стрелку. При быстром наборе после щелчка запоздалый ответ редактора о положении курсора больше не обрезает уже набранное начало слова. Перед заменой свитчер сверяет слово с текстом у курсора.
+- Исправление работает и в полях, которые отдают текст вместе с форматированием. Когда редактор уже подтвердил слово и позицию курсора, отсутствие дополнительного маркера больше не заставляет свитчер ждать. Учтён пробел перед уже существующим словом.
+- Исправлено распознавание смешанных слов с «ё» на русской ПК-раскладке. Убраны повторные преобразования целого слова на обычном пробеле и лишние словарные проверки.
+
 ## 0.6.53 · build 92 · 2026-11-18
 
 - При вставке слова перед существующим текстом нажатый пробел теперь учитывается как граница. Например, `lkz` и пробел перед «работы» дают «для работы». После перемещения курсора стрелкой проверяется первое целое слово.
@@ -149,6 +155,12 @@
 - Исправлены обработка границ слова и ряд сценариев замены в текстовых редакторах.
 
 ---
+
+## 0.6.54 · build 93 · 2026-11-19
+
+- Fixed missed first words after Command–Left/Right navigation. When the editor reports a new field after typing has started at a clicked position, the switcher keeps the typed prefix and verifies the complete word at the caret before correction.
+- Added bounded reads for editors that expose formatted text ranges. A missing optional selection marker no longer delays a correction when the editor has confirmed the word and caret. Verification also accounts for the space typed before an existing word.
+- Fixed mixed-layout words containing ё on the Russian PC layout and reduced repeated whole-word conversions and dictionary lookups on the typing path.
 
 ## 0.6.53 · build 92 · 2026-11-18
 

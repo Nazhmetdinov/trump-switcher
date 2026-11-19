@@ -1,5 +1,38 @@
 # Trump Switcher verification
 
+## 0.6.54 · build 93 · 2026-11-19
+
+On Apple Silicon, the release build passed 516,231 core checks, 240 native
+keyboard event checks, 240 in-process editor checks and 721 configuration
+checks. The ordering model passed all 8,208 schedules. No test typed into a
+third-party application.
+
+- **First word at a new caret.** A before/after comparison delivered field
+  metadata at each possible split in seven RU/EN inputs, including one-letter
+  words. The buffer retained the complete token in 7 of 30 cases on 0.6.53
+  and 30 of 30 on 0.6.54. The editor must still confirm the complete text
+  before correction. Separate cases cover keyboard navigation, genuine focus
+  changes, pending replacements and unavailable text ranges.
+- **Editor response.** Tested plain and attributed range reads, transient
+  failures, optional selection markers, and a physical space before existing
+  text. A verified caret with a missing optional marker can proceed immediately.
+  A failed text read or a changed selection still prevents an unsafe edit.
+- **Recognition.** All 236,210 vocabulary matrix checks passed. The separate
+  frequency audit covered 239,997 entries across both directions and three
+  layout pairs, with zero wrong conversions and zero changes to valid source
+  words. On standard Russian, EN → RU yielded 49,547 exact corrections,
+  50 valid-source collisions and 402 skips, the same as 0.6.53. Russian PC
+  keyboard coverage exercises Apple's ANSI and ISO tables separately.
+- **Timing.** Compared the 0.6.53 and 0.6.54 recognizers on the same Mac,
+  with Russian priority enabled, using 18,400 decisions per layout pair.
+  On ABC/Russian the 95th percentile fell from 108 to 92 µs. On ABC/Russian PC
+  it fell from 105 to 93 µs. These measurements cover the recognizer.
+  Time to display a correction also depends on the target editor.
+
+Both installers passed signature, architecture, embedded-resource and disk-image
+checks. The Intel executable was cross-compiled on Apple Silicon. Intel runtime
+and live third-party editor latency remain unverified for this build.
+
 ## 0.6.53 · build 92 · 2026-11-18
 
 The Apple Silicon build passed 515,643 core checks, 240 native-event checks,

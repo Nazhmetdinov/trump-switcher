@@ -16,6 +16,24 @@ enum ReplacementPreflight {
             lock.lock(); active = false; lock.unlock()
         }
     }
+    enum RangeTextMethod {
+        case plain, attributed
+
+        /// Ask only for the supplied range. A transport failure is never
+        /// evidence that the plain API is unsupported; preserve the retry.
+        func read(copy: (String) -> (AXError, CFTypeRef?)) -> (AXError, String?, RangeTextMethod) {
+            if self == .plain {
+                let (error, value) = copy(kAXStringForRangeParameterizedAttribute)
+                switch error {
+                case .attributeUnsupported, .parameterizedAttributeUnsupported, .notImplemented: break
+                default: return (error, value as? String, .plain)
+                }
+            }
+            let (error, value) = copy(kAXAttributedStringForRangeParameterizedAttribute)
+            let text = (value as? NSAttributedString)?.string
+            return (error, text, .attributed)
+        }
+    }
     struct Context {
         let element: AXUIElement
         let selection: NSRange
@@ -23,10 +41,11 @@ enum ReplacementPreflight {
         let afterCaret: String?
         var prefersSelectionReplacement = false
         var ownSelectionWaits = 0
+        var textMethod: RangeTextMethod = .plain
         var insertingSpace = false
         func plan(original: String, replacement: String) -> WordReplacementPlan? {
             WordReplacementPlan(original: original, replacement: replacement, selection: selection,
-                                beforeCaret: beforeCaret, afterCaret: afterCaret)
+                                beforeCaret: beforeCaret, afterCaret: afterCaret, insertingSpace: insertingSpace)
         }
     }
     /// A recent keyboard selection owned by this monitor, not a general
@@ -56,7 +75,7 @@ enum ReplacementPreflight {
     enum OpaqueIdentityStatus { case current, unavailable, changed }
     private enum FocusIdentity { case allowed(AXUIElement), unsafe, unavailable }
     private enum MetadataSafety { case allowed, unsafe, unavailable }
-    private enum KeyboardReplacementMode { case selection, backspace, retry, reject }
+    enum KeyboardReplacementMode { case selection, backspace, retry, reject }
     private enum CheckResult {
         case matches(Context), unavailable, retry(String), ownSelectionInProgress, reject(String)
     }
@@ -193,7 +212,7 @@ enum ReplacementPreflight {
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid,
               case .field(let current) = DirectWordReplacement.resolveFocus(pid: pid, budget: 0.025),
               CFEqual(current, context.element),
-              case .matches(let fresh) = checkCurrent(original: original, element: current, insertingSpace: context.insertingSpace) else { return false }
+              case .matches(let fresh) = checkCurrent(original: original, element: current, insertingSpace: context.insertingSpace, textMethod: context.textMethod) else { return false }
         return fresh.selection == context.selection && fresh.beforeCaret == context.beforeCaret &&
                fresh.afterCaret == context.afterCaret
     }
@@ -382,17 +401,30 @@ enum ReplacementPreflight {
         guard prepare() else { return .retry }
         var raw: CFTypeRef?
         let markerError = AXUIElementCopyAttributeValue(element, "AXSelectedTextMarkerRange" as CFString, &raw)
-        guard markerError == .success else { return failure(markerError) }
-        guard let raw, CFGetTypeID(raw) == AXTextMarkerRangeGetTypeID() else { return .retry }
-        let markers = raw as! AXTextMarkerRange
-        guard CFEqual(AXTextMarkerRangeCopyStartMarker(markers), AXTextMarkerRangeCopyEndMarker(markers)) else { return .reject }
-        return .selection
+        return markerMode(error: markerError, value: raw)
+    }
+
+    /// Only after a verified numeric caret and exact text. A rich editor can
+    /// advertise marker methods yet have no marker for the current position.
+    static func markerMode(error: AXError, value: CFTypeRef?) -> KeyboardReplacementMode {
+        switch error {
+        case .attributeUnsupported, .parameterizedAttributeUnsupported, .notImplemented, .noValue: return .backspace
+        case .cannotComplete, .failure: return .retry
+        case .success:
+            switch DirectWordReplacement.markerSelectionReply(error: error, value: value) {
+            case .collapsed: return .selection
+            case .selected, .unsafe: return .reject
+            case .absent, .unavailable: return .retry
+            }
+        default: return .reject
+        }
     }
 
     private static func checkCurrent(original: String, element: AXUIElement, budget: TimeInterval = 0.03,
                                      cancellation: Cancellation? = nil,
                                      probeSelectionReplacement: Bool = false,
-                                     previousSelection: SelectionProgress? = nil, insertingSpace: Bool = false) -> CheckResult {
+                                     previousSelection: SelectionProgress? = nil, insertingSpace: Bool = false,
+                                     textMethod: RangeTextMethod = .plain) -> CheckResult {
         guard cancellation?.isActive != false else { return .reject("Проверка отменена") }
         guard !original.isEmpty, original.utf16.count <= 128 else { return .reject("Недопустимая длина проверяемого слова") }
         guard budget > 0 else { return .retry("Истёк срок проверки слова") }
@@ -445,16 +477,19 @@ enum ReplacementPreflight {
         let extra = (items[1] as? Int).map { $0 > selection.location ? 1 : 0 } ?? 0
         var range = CFRange(location: start, length: selection.location - start + extra)
         guard let parameter = AXValueCreate(.cfRange, &range) else { return .reject("Не удалось создать диапазон проверки") }
-        let remaining = deadline - ProcessInfo.processInfo.systemUptime
-        guard remaining > 0 else { return .retry("Истёк срок проверки слова") }
-        guard cancellation?.isActive != false else { return .reject("Проверка отменена") }
-        AXUIElementSetMessagingTimeout(element, Float(min(0.015, remaining)))
-        var raw: CFTypeRef?
-        let textError = AXUIElementCopyParameterizedAttributeValue(element, kAXStringForRangeParameterizedAttribute as CFString,
-                                                                  parameter, &raw)
+        let (textError, text, usedMethod) = textMethod.read { attribute in
+            let remaining = deadline - ProcessInfo.processInfo.systemUptime
+            guard remaining > 0, cancellation?.isActive != false,
+                  AXUIElementSetMessagingTimeout(element, Float(min(0.015, remaining))) == .success else {
+                return (.cannotComplete, nil)
+            }
+            var raw: CFTypeRef?
+            let error = AXUIElementCopyParameterizedAttributeValue(element, attribute as CFString, parameter, &raw)
+            return (error, raw)
+        }
         guard cancellation?.isActive != false else { return .reject("Проверка отменена") }
         guard textError == .success else { return readFailure(textError) }
-        guard let text = raw as? String else { return .reject("Редактор не вернул текст проверяемого диапазона") }
+        guard let text else { return .reject("Редактор не вернул текст проверяемого диапазона") }
         // Some web/Qt wrappers expose a dummy zero range but no string API.
         // That is "unavailable", not proof that a real word disappeared.
         guard text.utf16.count == range.length else {
@@ -465,6 +500,7 @@ enum ReplacementPreflight {
         let offset = selection.location - start
         var context = Context(element: element, selection: NSRange(location: selection.location, length: selection.length),
             beforeCaret: ns.substring(to: offset), afterCaret: extra == 1 ? ns.substring(from: offset) : nil)
+        context.textMethod = usedMethod
         context.insertingSpace = insertingSpace
         let textMatches = ReplacementContext.matches(original: original, beforeCaret: context.beforeCaret,
             afterCaret: context.afterCaret, selectionLength: selection.length, insertingSpace: insertingSpace) ||

@@ -298,6 +298,54 @@ enum EditorReplacementChecks {
             "a successful but empty marker reply is not a supported absence")
         expect(DirectWordReplacement.markerSelectionReply(error: .success, value: "malformed" as CFString) == .unavailable,
             "a malformed marker type cannot permit keyboard replacement")
+        for (error, expected) in [(AXError.noValue, ReplacementPreflight.KeyboardReplacementMode.backspace),
+                                  (.attributeUnsupported, .backspace), (.cannotComplete, .retry), (.failure, .retry),
+                                  (.apiDisabled, .reject), (.invalidUIElement, .reject), (.success, .retry)] {
+            expect(ReplacementPreflight.markerMode(error: error, value: nil) == expected,
+                   "optional markers distinguish a definitive absence, busy editor and revoked access")
+        }
+        expect(ReplacementPreflight.markerMode(error: .success, value: collapsed) == .selection,
+               "a collapsed rich marker permits selection replacement")
+        expect(ReplacementPreflight.markerMode(error: .success, value: nonempty) == .reject,
+               "a nonempty rich marker forbids replacement even with a collapsed numeric caret")
+        // The common plain path needs one read. Only explicit lack of the
+        // plain API permits the same bounded range to be read as rich text.
+        for reply in [AXError.success, .attributeUnsupported, .notImplemented, .parameterizedAttributeUnsupported,
+                      .cannotComplete, .failure, .noValue, .apiDisabled, .invalidUIElement] {
+            var calls = [String]()
+            let (error, text, method) = ReplacementPreflight.RangeTextMethod.plain.read { attribute in
+                calls.append(attribute)
+                if attribute == kAXStringForRangeParameterizedAttribute {
+                    return (reply, reply == .success ? "lkz" as CFString : nil)
+                }
+                return (.success, NSAttributedString(string: "lkz"))
+            }
+            let unsupported = [AXError.attributeUnsupported, .notImplemented, .parameterizedAttributeUnsupported].contains(reply)
+            expect(calls.count == (unsupported ? 2 : 1), "extra range IPC only for an explicitly unsupported API")
+            expect(method == (unsupported ? .attributed : .plain), "remember the working API for write-edge revalidation")
+            expect(error == (unsupported ? .success : reply), "preserve uncertainty and access errors")
+            expect(text == (unsupported || reply == .success ? "lkz" : nil), "read exactly the requested range")
+        }
+        let richView = NSTextView(frame: .zero)
+        richView.isRichText = true
+        richView.string = "🙂 lkzработы"
+        let requested = NSRange(location: 2, length: 5)
+        let (richError, boundedText, _) = ReplacementPreflight.RangeTextMethod.plain.read { attribute in
+            if attribute == kAXStringForRangeParameterizedAttribute { return (.parameterizedAttributeUnsupported, nil) }
+            return (.success, richView.accessibilityAttributedString(for: requested))
+        }
+        expect(richError == .success && boundedText == " lkzр", "AppKit rich range preserves UTF-16 offsets and both neighboring characters")
+        let (error, text, _) = ReplacementPreflight.RangeTextMethod.attributed.read { attribute in
+            expect(attribute == kAXAttributedStringForRangeParameterizedAttribute, "skip the unsupported plain read on revalidation")
+            return (.success, NSNumber(value: 3))
+        }
+        expect(error == .success && text == nil, "malformed attributed text cannot prove a word")
+        for separator in [false, true] {
+            let context = ReplacementPreflight.Context(element: AXUIElementCreateApplication(getpid()),
+                selection: NSRange(location: 3, length: 0), beforeCaret: "lkz", afterCaret: "р", insertingSpace: separator)
+            let observationPlan = context.plan(original: "lkz", replacement: "для")
+            expect((observationPlan != nil) == separator, "readback uses the same held-space boundary as the preflight")
+        }
         return count
     }
 }

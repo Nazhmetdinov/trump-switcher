@@ -19,6 +19,10 @@ public struct KeyboardLayoutTable {
     private let inverse: [String: PhysicalKey]
     private let typingInverse: [String: PhysicalKey]
     public init?(id: String) {
+        self.init(id: id, keyboardType: UInt32(LMGetKbdType()))
+    }
+
+    public init?(id: String, keyboardType: UInt32) {
         guard let source = InputSources.sources(matching: id, includeDisabled: true).first,
               let raw = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData) else { return nil }
         let data = Unmanaged<CFData>.fromOpaque(raw).takeUnretainedValue()
@@ -42,7 +46,7 @@ public struct KeyboardLayoutTable {
                 var length = 0
                 var units = [UniChar](repeating: 0, count: 8)
                 let result = UCKeyTranslate(table, code, UInt16(kUCKeyActionDown), modifiers,
-                    UInt32(LMGetKbdType()), OptionBits(1 << kUCKeyTranslateNoDeadKeysBit), &state, units.count, &length, &units)
+                    keyboardType, OptionBits(1 << kUCKeyTranslateNoDeadKeysBit), &state, units.count, &length, &units)
                 guard result == noErr, length == 1, let scalar = UnicodeScalar(Int(units[0])),
                       !CharacterSet.controlCharacters.contains(scalar),
                       (!CharacterSet.whitespacesAndNewlines.contains(scalar) || code == 49) else { continue }
@@ -81,7 +85,10 @@ public struct KeyboardLayoutTable {
 public final class KeyboardLayouts {
     private var tables: [String: KeyboardLayoutTable] = [:]
     public init() {
-        for id in InputSources.russianIDs + InputSources.englishIDs { tables[id] = KeyboardLayoutTable(id: id) }
+        let keyboardType = UInt32(LMGetKbdType())
+        for id in InputSources.russianIDs + InputSources.englishIDs {
+            tables[id] = KeyboardLayoutTable(id: id, keyboardType: keyboardType)
+        }
     }
     public func table(_ id: String) -> KeyboardLayoutTable? { tables[id] }
     public func table(for layout: Layout) -> KeyboardLayoutTable? {

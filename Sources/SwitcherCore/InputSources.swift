@@ -37,8 +37,8 @@ public enum InputSources {
         return Unmanaged<CFString>.fromOpaque(raw).takeUnretainedValue() as String
     }
     public static func currentLayout() -> Layout? { layout(forID: currentID()) }
-    public static func sourceID(for layout: Layout) -> String? {
-        if let current = currentID(), ids(layout).contains(current) { return current }
+    public static func sourceID(for layout: Layout, currentID: String? = InputSources.currentID()) -> String? {
+        if let current = currentID, ids(layout).contains(current) { return current }
         ensureSources()
         let last = layout == .russian ? lastRussian : lastEnglish
         let preferred = layout == .russian ? preferredRussian : preferredEnglish

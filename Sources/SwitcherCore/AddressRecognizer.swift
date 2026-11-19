@@ -16,7 +16,10 @@ public final class AddressRecognizer {
     }
 
     public func recognizes(_ text: String) -> Bool {
-        guard available, (3...128).contains(text.utf16.count),
+        // Bare hosts and email domains need a dot. Explicit schemes can
+        // also use a single-label host (e.g. http://localhost).
+        guard text.utf8.contains(0x2E) || text.utf8.contains(0x3A),
+              available, (3...128).contains(text.utf16.count),
               text.unicodeScalars.allSatisfy({ (33...126).contains($0.value) }),
               !text.contains("\\"), !text.contains("<"), !text.contains(">"), !text.contains("\"") else { return false }
         let lower = text.lowercased()

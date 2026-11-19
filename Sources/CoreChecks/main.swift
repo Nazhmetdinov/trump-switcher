@@ -438,13 +438,6 @@ for id in InputSources.russianIDs {
 check(KeyboardLayoutTable(id: "com.apple.keylayout.Russian")!.character(code: 42, shift: false, capsLock: false) == "ё", "Mac ё is on backslash key")
 check(KeyboardLayoutTable(id: "com.apple.keylayout.Russian")!.character(code: 26, shift: true, capsLock: false) == ".", "Mac dot is Shift 7")
 check(KeyboardLayoutTable(id: "com.apple.keylayout.RussianWin")!.character(code: 44, shift: false, capsLock: false) == ".", "PC dot is slash key")
-let russianWinTable = KeyboardLayoutTable(id: "com.apple.keylayout.RussianWin")!
-check(russianWinTable.character(code: 10, shift: false, capsLock: false) == "ё", "PC Russian also exposes ё on ISO section key")
-check(russianWinTable.character(code: 50, shift: false, capsLock: false) == "ё", "PC Russian exposes ё on ANSI grave key")
-check(russianWinTable.key(for: "ё")?.code == 50, "ambiguous glyph prefers ANSI physical position")
-check(russianWinTable.convert("ёлка", to: englishTable) == "`krf", "PC Russian ё converts through ANSI grave key")
-check(russianWinTable.replacement("ё")?.code == 50, "PC Russian replacement uses ANSI grave key")
-
 // Regressions for user-reported proper names and stale key payloads during fast typing.
 let abcTable = KeyboardLayoutTable(id: "com.apple.keylayout.ABC")!
 let queuedRU = QueuedLayoutTransition(previous: abcTable, target: macTable, boundary: 1000, selectedAt: 2000)

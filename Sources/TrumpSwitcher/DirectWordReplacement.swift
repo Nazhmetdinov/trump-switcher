@@ -79,10 +79,6 @@ enum DirectWordReplacement {
         guard let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
         return (value as! AXUIElement)
     }
-    private static func parameter(_ element: AXUIElement, _ name: String, _ input: CFTypeRef) -> CFTypeRef? {
-        var output: CFTypeRef?
-        return AXUIElementCopyParameterizedAttributeValue(element, name as CFString, input, &output) == .success ? output : nil
-    }
     private static func kind(_ field: AXUIElement, pid: pid_t, prepare: (AXUIElement) -> Bool) -> FocusFieldKind {
         var actual: pid_t = 0
         guard AXUIElementGetPid(field, &actual) == .success, actual == pid else { return .unsafe }
@@ -226,10 +222,14 @@ enum DirectWordReplacement {
         var range = CFRange(location: range.location, length: range.length)
         return AXValueCreate(.cfRange, &range)
     }
-    private static func read(_ field: AXUIElement, _ range: NSRange) -> String? {
-        guard range.length <= 130, let input = encoded(range),
-              let text = parameter(field, kAXStringForRangeParameterizedAttribute, input) as? String,
-              text.utf16.count == range.length else { return nil }
+    private static func read(_ field: AXUIElement, _ range: NSRange, using method: ReplacementPreflight.RangeTextMethod) -> String? {
+        guard range.length <= 130, let input = encoded(range) else { return nil }
+        let (error, text, _) = method.read { attribute in
+            var raw: CFTypeRef?
+            let error = AXUIElementCopyParameterizedAttributeValue(field, attribute as CFString, input, &raw)
+            return (error, raw)
+        }
+        guard error == .success, let text, text.utf16.count == range.length else { return nil }
         return text
     }
     static func requestResult(_ error: AXError) -> WordReplacementRequestResult {
@@ -257,7 +257,7 @@ enum DirectWordReplacement {
               let receipt = ReplacementObservation(start: plan.target.location, replacement: replacement, boundary: boundary),
               AXUIElementSetMessagingTimeout(now, 0.005) == .success,
               let caret = selection(now), receipt.permits(caret: caret),
-              let actual = read(now, receipt.range),
+              let actual = read(now, receipt.range, using: context.textMethod),
               !IsSecureEventInputEnabled(), NSWorkspace.shared.frontmostApplication?.processIdentifier == pid,
               case .field(let current) = resolveFocus(pid: pid, budget: 0.005), CFEqual(now, current),
               let finalCaret = selection(current), receipt.permits(caret: finalCaret) else { return .unavailable }

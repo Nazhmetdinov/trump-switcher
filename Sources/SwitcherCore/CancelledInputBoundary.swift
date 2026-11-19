@@ -6,7 +6,7 @@ public enum CancelledInputBoundary {
                                option: Bool = false, shift: Bool = false, function: Bool = false,
                                buffer: inout TypingBuffer, replay: inout SessionReplayBoundary) {
         if click {
-            buffer.reset(); replay.record(.focusNavigation); return
+            buffer.beginAtMovedCaret(afterClick: true); replay.record(.focusNavigation); return
         }
         guard keyDown else { return }
         if let shortcut = TypingShortcut.action(code: key, command: command, control: control,
@@ -15,6 +15,7 @@ public enum CancelledInputBoundary {
             switch shortcut {
             case .inputSource: replay.record(.unchanged)
             case .selectAll: replay.record(.boundary)
+            case .moveCaret: replay.record(.unknownText)
             case .invalidate:
                 let appSwitch = key == 48 && command && !control && !option
                 replay.record(appSwitch ? .focusNavigation : .unknownText)
